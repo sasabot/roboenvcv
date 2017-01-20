@@ -1,5 +1,5 @@
-#ifndef _AERO_STD_AEROCV_
-#define _AERO_STD_AEROCV_
+#ifndef _ROBOENVCV_ROBOENVCV_
+#define _ROBOENVCV_ROBOENVCV_
 
 #include <opencv2/core/utility.hpp>
 #include <opencv2/highgui.hpp>
@@ -18,14 +18,13 @@
 #include <pcl/segmentation/region_growing.h>
 #include <pcl/segmentation/extract_clusters.h>
 
-#include "aero_std/colors.h"
-#include "aero_std/proc2d.h"
+#include <chrono>
 
-namespace aero
+#include "roboenvcv/colors.h"
+#include "roboenvcv/proc2d.h"
+
+namespace roboenvcv
 {
-  namespace aerocv
-  {
-
     /// @brief Identified information of object.
     struct objectproperties {
       std::vector<std::string> name;
@@ -68,7 +67,7 @@ namespace aero
     ///   e.g. 100% blue is better match than 50% blue
     ///   e.g. 100% blue nearby is better match than 100% blue far away
     ///   e.g. 100% blue far away is better match than 50% blue nearby
-    /// @param[in] _target_color Named color to find. cf. aerocv::colorMap9
+    /// @param[in] _target_color Named color to find. cf. roboenvcv::colorMap9
     /// @param[in] _scene Lists of objects to find from.
     /// @return Indices (in vector _scene) of matched objects sorted by likeliness.
     std::vector<int> FindTarget
@@ -92,8 +91,6 @@ namespace aero
     (int _target, std::vector<objectarea> &_scene,
      pcl::PointCloud<pcl::PointXYZRGB>::Ptr _cloud, cv::Mat &_img,
      std::string _debug_folder="");
-
-  }
 }
 
 #endif

@@ -1,8 +1,7 @@
-#include "aero_std/aerocv.hh"
-#include "aero_std/time.h"
+#include "roboenvcv/roboenvcv.hh"
 
 //////////////////////////////////////////////////
-void Get3DdataFrom2DBounds(aero::aerocv::objectarea &obj,
+void Get3DdataFrom2DBounds(roboenvcv::objectarea &obj,
                            int x, int y, int width, int height, int k,
                            cv::Mat &labeled_image,
                            pcl::PointCloud<pcl::PointXYZRGB>::Ptr _cloud,
@@ -62,15 +61,15 @@ void Get3DdataFrom2DBounds(aero::aerocv::objectarea &obj,
 };
 
 //////////////////////////////////////////////////
-std::pair<std::vector<aero::aerocv::objectarea>,
-          std::vector<aero::aerocv::objectarea> > aero::aerocv::DetectObjectnessArea
+std::pair<std::vector<roboenvcv::objectarea>,
+          std::vector<roboenvcv::objectarea> > roboenvcv::DetectObjectnessArea
 (pcl::PointCloud<pcl::PointXYZRGB>::Ptr _cloud, cv::Mat &_img,
  cv::Vec3b _env_color, float _color_thre, std::string _debug_folder)
 {
-  auto begin = aero::time::now();
+  auto begin = std::chrono::high_resolution_clock::now();
 
-  std::vector<aero::aerocv::objectarea> scene;
-  std::vector<aero::aerocv::objectarea> env;
+  std::vector<roboenvcv::objectarea> scene;
+  std::vector<roboenvcv::objectarea> env;
   int w_scale = _img.cols / _cloud->width;
   int h_scale = _img.rows / _cloud->height;
 
@@ -185,7 +184,7 @@ std::pair<std::vector<aero::aerocv::objectarea>,
     }
 
     // add object to scene
-    aero::aerocv::objectarea obj;
+    roboenvcv::objectarea obj;
     obj.indices3d.assign(it->indices.begin(), it->indices.end());
     obj.visible3d = true;
     obj.center3d = center;
@@ -278,7 +277,7 @@ std::pair<std::vector<aero::aerocv::objectarea>,
       // remove noise
       if (width_k * height_k < lower_noise_threshold) continue;
 
-      aero::aerocv::objectarea obj;
+      roboenvcv::objectarea obj;
       // get 3d data
       Get3DdataFrom2DBounds(obj, x_k, y_k, width_k, height_k, k,
                             labeled_image, _cloud, normals);
@@ -342,7 +341,7 @@ std::pair<std::vector<aero::aerocv::objectarea>,
             > upper_noise_threshold)
           continue;
 
-      aero::aerocv::objectarea obj;
+      roboenvcv::objectarea obj;
       // get current cluster and 3d data
       Get3DdataFrom2DBounds(obj, x, y, width, height, k,
                             labeled_image, _cloud, normals);
@@ -382,18 +381,18 @@ std::pair<std::vector<aero::aerocv::objectarea>,
     // get color information of cluster
     int quantize_amount = 4;
     std::vector<cv::Vec3b> dominant_colors(quantize_amount);
-    aero::aerocv::medianCut(colors1d, 0, 0, dominant_colors);
+    roboenvcv::medianCut(colors1d, 0, 0, dominant_colors);
     // check how many colors match environment color information
     int expected_matches = 3;
     int matches = 0;
     for (auto c = dominant_colors.begin(); c != dominant_colors.end(); ++c)
-      if (aero::aerocv::distance(aero::aerocv::rgb2lab(*c),
-                                 aero::aerocv::rgb2lab(_env_color))
+      if (roboenvcv::distance(roboenvcv::rgb2lab(*c),
+                                 roboenvcv::rgb2lab(_env_color))
           < _color_thre)
         ++matches;
     if (matches >= expected_matches) { // if likely environment
       if (_debug_folder != "")
-        aero::aerocv::drawPalette
+        roboenvcv::drawPalette
           (dominant_colors, _env_color, _debug_folder + "objectness_"
            + std::to_string(obj->bounds2d.width) + "x"
            + std::to_string(obj->bounds2d.height)); // give identical name
@@ -404,15 +403,17 @@ std::pair<std::vector<aero::aerocv::objectarea>,
     }
 
     // from color palette, get best matched color names
-    aero::aerocv::getColorNames
-      (dominant_colors, obj->properties.colors, aero::aerocv::colorMap9);
+    roboenvcv::getColorNames
+      (dominant_colors, obj->properties.colors, roboenvcv::colorMap9);
 
     ++it;
   }
 
-  auto end = aero::time::now();
+  auto end = std::chrono::high_resolution_clock::now();
 
-  std::cout << "detection time " << aero::time::ms(end - begin) << std::endl;
+  std::cout << "detection time "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count()
+            << std::endl;
 
   // view results if debug mode is true
 
@@ -478,8 +479,8 @@ std::pair<std::vector<aero::aerocv::objectarea>,
 }
 
 //////////////////////////////////////////////////
-std::vector<int> aero::aerocv::FindTarget
-(std::string _target_color, std::vector<aero::aerocv::objectarea> &_scene)
+std::vector<int> roboenvcv::FindTarget
+(std::string _target_color, std::vector<roboenvcv::objectarea> &_scene)
 {
   std::vector<std::pair<int, float> > candidates;
 
@@ -533,10 +534,10 @@ std::vector<int> aero::aerocv::FindTarget
 }
 
 //////////////////////////////////////////////////
-std::vector<aero::aerocv::objectarea> aero::aerocv::filter
-(std::vector<aero::aerocv::objectarea> _objects, std::vector<int> _indices)
+std::vector<roboenvcv::objectarea> roboenvcv::filter
+(std::vector<roboenvcv::objectarea> _objects, std::vector<int> _indices)
 {
-  std::vector<aero::aerocv::objectarea> result;
+  std::vector<roboenvcv::objectarea> result;
   for (auto it = _indices.begin(); it != _indices.end(); ++it)
     if (*it >= 0 && *it < _objects.size())
       result.push_back(_objects.at(*it));
@@ -544,19 +545,19 @@ std::vector<aero::aerocv::objectarea> aero::aerocv::filter
 }
 
 //////////////////////////////////////////////////
-aero::aerocv::graspconfig aero::aerocv::ConfigurationFromLocal1DState
-(int _target, std::vector<aero::aerocv::objectarea> &_scene,
+roboenvcv::graspconfig roboenvcv::ConfigurationFromLocal1DState
+(int _target, std::vector<roboenvcv::objectarea> &_scene,
  pcl::PointCloud<pcl::PointXYZRGB>::Ptr _cloud, cv::Mat &_img,
  std::string _debug_folder)
 {
-  aero::aerocv::graspconfig result;
+  roboenvcv::graspconfig result;
   auto target = _scene.begin() + _target;
 
   // check sparsity of surroundings
   // here, objects with more than two detected facets will not be sparse
   // only objects with one detected facet and are far apart will be sparse
   float distance_threshold = 0.15; // m
-  std::vector<std::vector<aero::aerocv::objectarea>::iterator > nearby_objects;
+  std::vector<std::vector<roboenvcv::objectarea>::iterator > nearby_objects;
   for (auto obj = _scene.begin(); obj != _scene.end(); ++obj) {
     if (!obj->visible3d) continue; // currently not supported
     if (obj == target) continue; // obviously, don't include self
@@ -587,7 +588,7 @@ aero::aerocv::graspconfig aero::aerocv::ConfigurationFromLocal1DState
   // check top grasp-ability from environment
   // check depth of points behind target
   float depth_threshold = 0.02; // m
-  std::vector<std::vector<aero::aerocv::objectarea>::iterator > objects_behind;
+  std::vector<std::vector<roboenvcv::objectarea>::iterator > objects_behind;
   for (auto it = nearby_objects.begin(); it != nearby_objects.end(); ++it) {
     auto obj = *it;
 
@@ -614,7 +615,7 @@ aero::aerocv::graspconfig aero::aerocv::ConfigurationFromLocal1DState
 
   // check norm of objects behind and check for facets
   bool detected_parallel = false;
-  std::vector<std::vector<aero::aerocv::objectarea>::iterator > facets;
+  std::vector<std::vector<roboenvcv::objectarea>::iterator > facets;
   for (auto it = objects_behind.begin(); it != objects_behind.end(); ++it) {
     auto obj = *it;
 
@@ -681,7 +682,7 @@ aero::aerocv::graspconfig aero::aerocv::ConfigurationFromLocal1DState
     cv::Mat gray;
     cv::cvtColor(_img(obj->bounds2d), gray, CV_RGB2GRAY);
     cv::Mat stats; // information of each package cluster if found
-    if (aero::aerocv::findPackagePattern(gray, stats, _debug_folder)) {
+    if (roboenvcv::findPackagePattern(gray, stats, _debug_folder)) {
       std::cout << "detected pile, likely contact grasp-able!\n";
       result.sparse = 0;
       result.contact = 1;

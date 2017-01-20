@@ -1,5 +1,5 @@
-#ifndef _AERO_STD_PROC2D_
-#define _AERO_STD_PROC2D_
+#ifndef _ROBOENVCV_PROC2D_
+#define _ROBOENVCV_PROC2D_
 
 #include <vector>
 #include <climits>
@@ -11,12 +11,9 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
-namespace aero
+namespace roboenvcv
 {
-  namespace aerocv
-  {
-
-    //////////////////////////////////////////////////
+   //////////////////////////////////////////////////
     int cutComponentsWithStats
       (cv::Mat image, cv::Mat &labels, cv::Mat &stats, cv::Mat &centroids,
        std::string debug_folder="")
@@ -197,8 +194,6 @@ namespace aero
 
       return false;
     };
-
-  }
 }
 
 #endif

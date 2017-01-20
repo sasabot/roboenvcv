@@ -1,5 +1,5 @@
-#ifndef _AERO_STD_XTION_UTILS_
-#define _AERO_STD_XTION_UTILS_
+#ifndef _ROBOENVCV_XTION_UTILS_
+#define _ROBOENVCV_XTION_UTILS_
 
 #include <opencv2/core/utility.hpp>
 #include <opencv2/highgui.hpp>
@@ -13,7 +13,7 @@
 #include <pcl/conversions.h>
 #include <pcl_ros/transforms.h>
 
-#include "aero_std/aerocv.hh"
+#include "roboenvcv/roboenvcv.hh"
 #include "sensor_msgs/PointCloud2.h"
 #include "sensor_msgs/Image.h"
 
@@ -44,7 +44,7 @@ namespace xtion
     };
 
     //////////////////////////////////////////////////
-    void Convert(aero::aerocv::objectarea &obj)
+    void Convert(roboenvcv::objectarea &obj)
     {
       printf("xtion does not require convert!");
     };

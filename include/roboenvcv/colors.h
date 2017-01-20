@@ -1,5 +1,5 @@
-#ifndef _AERO_STD_COLORS_
-#define _AERO_STD_COLORS_
+#ifndef _ROBOENVCV_COLORS_
+#define _ROBOENVCV_COLORS_
 
 #include <cstdlib>
 #include <cmath>
@@ -10,11 +10,8 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
-namespace aero
+namespace roboenvcv
 {
-  namespace aerocv
-  {
-
     //////////////////////////////////////////////////
     inline std::array<float, 3> rgb2lab(cv::Vec3b _color) // bgr
     {
@@ -315,8 +312,6 @@ namespace aero
       {"black", cv::Vec3b(0, 0, 0)},
       {"white", cv::Vec3b(255, 255, 255)}
     };
-
-  }
 }
 
 #endif
