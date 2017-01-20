@@ -1,13 +1,10 @@
-#ifndef _AERO_STD_INTERACTION_
-#define _AERO_STD_INTERACTION_
+#ifndef _ROBOENVCV_INTERACTION_
+#define _ROBOENVCV_INTERACTION_
 
 #include <pcl/PCLPointCloud2.h>
 
-namespace aero
+namespace roboenvcv
 {
-  namespace aerocv
-  {
-
     // @brief Head pose information in detected camera coordinate.
     struct PersonCameraCoords {
       Eigen::Vector3f position3d;
@@ -126,8 +123,6 @@ namespace aero
 
       return 0.0;
     };
-
-  }
 }
 
 #endif
