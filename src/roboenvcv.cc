@@ -57,6 +57,19 @@ void Get3DdataFrom2DBounds(roboenvcv::objectarea &obj,
     if (normal_count > 0) normal.normalize();
     obj.center3d = center;
     obj.normal3d = normal;
+
+    // get color data
+    std::vector<cv::Vec3b> colors1d(obj.indices3d.size());
+    int color1d_idx = 0;
+    for (auto pit = obj.indices3d.begin(); pit != obj.indices3d.end(); ++pit) {
+      uint32_t rgb = *reinterpret_cast<int*>(&_cloud->points[*pit].rgb);
+      colors1d[color1d_idx++] = cv::Vec3b
+        ((rgb) & 0x0000ff, (rgb >> 8) & 0x0000ff, (rgb >> 16) & 0x0000ff);
+    }
+    std::vector<cv::Vec3b> dominant_colors(4); // get four colors
+    roboenvcv::medianCut(colors1d, 0, 0, dominant_colors);
+    roboenvcv::getColorNames
+      (dominant_colors, obj.properties.colors, roboenvcv::colorMap9);
   }
 };
 
@@ -278,7 +291,7 @@ std::pair<std::vector<roboenvcv::objectarea>,
       if (width_k * height_k < lower_noise_threshold) continue;
 
       roboenvcv::objectarea obj;
-      // get 3d data
+      // get 3d data and color data
       Get3DdataFrom2DBounds(obj, x_k, y_k, width_k, height_k, k,
                             labeled_image, _cloud, normals);
       obj.bounds2d =
@@ -342,7 +355,7 @@ std::pair<std::vector<roboenvcv::objectarea>,
           continue;
 
       roboenvcv::objectarea obj;
-      // get current cluster and 3d data
+      // get current cluster and 3d data + color data
       Get3DdataFrom2DBounds(obj, x, y, width, height, k,
                             labeled_image, _cloud, normals);
       obj.bounds2d =
@@ -485,7 +498,7 @@ std::vector<int> roboenvcv::FindTarget
   std::vector<std::pair<int, float> > candidates;
 
   for (auto obj = _scene.begin(); obj != _scene.end(); ++obj) {
-    if (!obj->visible3d) break;
+    if (!obj->visible3d) continue;
     for (auto c = obj->properties.colors.begin();
          c != obj->properties.colors.end(); ++c)
       if (c->first == _target_color) {
@@ -530,17 +543,6 @@ std::vector<int> roboenvcv::FindTarget
       *it++ = obj->first;
   }
 
-  return result;
-}
-
-//////////////////////////////////////////////////
-std::vector<roboenvcv::objectarea> roboenvcv::filter
-(std::vector<roboenvcv::objectarea> _objects, std::vector<int> _indices)
-{
-  std::vector<roboenvcv::objectarea> result;
-  for (auto it = _indices.begin(); it != _indices.end(); ++it)
-    if (*it >= 0 && *it < _objects.size())
-      result.push_back(_objects.at(*it));
   return result;
 }
 

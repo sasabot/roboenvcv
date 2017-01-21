@@ -13,7 +13,7 @@
 #include <pcl/conversions.h>
 #include <pcl_ros/transforms.h>
 
-#include "roboenvcv/roboenvcv.hh"
+#include "roboenvcv/types.h"
 #include "sensor_msgs/PointCloud2.h"
 #include "sensor_msgs/Image.h"
 
