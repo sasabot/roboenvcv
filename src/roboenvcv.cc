@@ -58,6 +58,11 @@ void Get3DdataFrom2DBounds(roboenvcv::objectarea &obj,
     obj.center3d = center;
     obj.normal3d = normal;
 
+    if (obj.indices3d.size() < 10) { // likely noise + cannot get color
+      obj.visible3d = false;
+      return;
+    }
+
     // get color data
     std::vector<cv::Vec3b> colors1d(obj.indices3d.size());
     int color1d_idx = 0;
@@ -77,7 +82,7 @@ void Get3DdataFrom2DBounds(roboenvcv::objectarea &obj,
 std::pair<std::vector<roboenvcv::objectarea>,
           std::vector<roboenvcv::objectarea> > roboenvcv::DetectObjectnessArea
 (pcl::PointCloud<pcl::PointXYZRGB>::Ptr _cloud, cv::Mat &_img,
- cv::Vec3b _env_color, float _color_thre, std::string _debug_folder)
+ cv::Vec3b _env_color, float _color_thre, float _dist_thre, std::string _debug_folder)
 {
   auto begin = std::chrono::high_resolution_clock::now();
 
@@ -171,7 +176,6 @@ std::pair<std::vector<roboenvcv::objectarea>,
 
   // evaluate whether cluster is within expected range
   // this operation removes floors and walls
-  float radius_threshold = 1.2; // meter
   for (auto it = clusters.begin(); it != clusters.end(); ) {
     Eigen::Vector3f center = {0.0, 0.0, 0.0};
     Eigen::Vector3f normal = {0.0, 0.0, 0.0};
@@ -191,7 +195,7 @@ std::pair<std::vector<roboenvcv::objectarea>,
 
     center /= it->indices.size();
     normal /= it->indices.size();
-    if (center.norm() > radius_threshold) {
+    if (center.norm() > _dist_thre) {
       it = clusters.erase(it);
       continue;
     }
@@ -215,7 +219,7 @@ std::pair<std::vector<roboenvcv::objectarea>,
 
   // depth cut
   for (auto it = _cloud->points.begin(); it != _cloud->points.end(); ++it)
-    if (it->z > 1.2)
+    if (it->z > _dist_thre)
       indices_without_label[static_cast<int>(it - _cloud->points.begin())] = 0;
 
   // binary cluster non-labeled regions
