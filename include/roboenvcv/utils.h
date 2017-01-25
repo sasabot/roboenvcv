@@ -47,16 +47,16 @@ namespace roboenvcv
     return result;
   }
 
-  /// @brief Calculates height of object from environment.
+  /// @brief Calculates distance of object to environment plane.
   /// @param[in] _obj Target object.
   /// @param[in] _env Target environment (should be plane).
   ///    Make sure _env and _obj has values in the same coordinate.
-  /// @return Height of object from environment..
-  float getHeight
+  /// @return Distance of object to environment plane.
+  float getDistance
     (objectarea _obj, objectarea _env)
   {
     Eigen::Vector3f w = _obj.center3d - _env.center3d;
-    return fabs(_env.normal3d.dot(w)) * 2;
+    return fabs(_env.normal3d.dot(w));
   }
 }
 
