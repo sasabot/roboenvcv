@@ -57,6 +57,12 @@ catkin_package(
  CATKIN_DEPENDS
  geometry_msgs roscpp roslib sensor_msgs std_msgs tf
 )
+else ()
+catkin_package(
+ INCLUDE_DIRS include
+ CATKIN_DEPENDS
+ geometry_msgs roscpp roslib sensor_msgs std_msgs tf
+)
 endif()
 
 include_directories(
