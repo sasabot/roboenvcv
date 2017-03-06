@@ -305,7 +305,7 @@ namespace roboenvcv
       {"yellow", cv::Vec3b(0, 255, 255)},
       // {"olive", cv::Vec3b(0, 128, 128)},
       // {"gold", cv::Vec3b(0, 117, 139)},
-      {"orange", cv::Vec3b(0, 128, 255)},
+      // {"orange", cv::Vec3b(0, 128, 255)},
       // {"brown", cv::Vec3b(19, 69, 139)},
       {"red", cv::Vec3b(0, 0, 255)},
       // {"gray", cv::Vec3b(128, 128, 128)},
