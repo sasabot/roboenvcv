@@ -76,6 +76,19 @@ namespace roboenvcv
   std::vector<int> FindTarget
   (std::string _target_color, std::vector<objectarea> &_scene);
 
+  /// @brief Patch object region with surrounding depth points.
+  /// @param[in] _target Target object to patch.
+  /// @param[in] _search_rows Number of surrounding rows to search.
+  ///    Searches above for positive rows and searches below for negative.
+  /// @param[in] _include_depths Depth threshold to include in patched region.
+  ///    Adds points deeper than target if positive, and points shallow if negative.
+  /// @param[in] _cloud Point cloud from sensor (should be same as target).
+  /// @param[in] _img Image from sensor (for resolution ratio).
+  /// @return Patched object region.
+  objectarea patchGrowth
+  (objectarea _target, int _search_rows, float _include_depths,
+   pcl::PointCloud<pcl::PointXYZRGB>::Ptr _cloud, cv::Mat _img);
+
   /// @brief Detect object information in relation to environment for grasping.
   /// @param[in] _target Id of target in vector _scene.
   /// @param[in] _scene List of objects to consider when analyzing.

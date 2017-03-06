@@ -584,6 +584,105 @@ std::vector<int> roboenvcv::FindTarget
 }
 
 //////////////////////////////////////////////////
+roboenvcv::objectarea patchGrowth
+(roboenvcv::objectarea _target, int _search_rows, float _include_depths,
+ pcl::PointCloud<pcl::PointXYZRGB>::Ptr _cloud, cv::Mat _img)
+{
+  std::vector<int> indices(_target.indices3d.begin(), _target.indices3d.end());
+  std::sort(indices.begin(), indices.end());
+  int min_index = indices.at(0);
+  int max_index = indices.at(indices.size() - 1);
+
+  int target_left_border = _target.bounds2d.x * _cloud->width / _img.cols;
+  int target_right_border =
+    (_target.bounds2d.x + _target.bounds2d.width) * _cloud->width / _img.cols;
+
+  int upper_border, lower_border;
+  if (_search_rows < 0) {
+    int target_lower_border =
+      (_target.bounds2d.y + _target.bounds2d.height) * _cloud->height / _img.rows;
+    upper_border = target_lower_border + 1;
+    lower_border = std::min(static_cast<int>(_cloud->height) - 1,
+                            target_lower_border - _search_rows);
+  } else {
+    int target_upper_border = _target.bounds2d.y * _cloud->height / _img.rows;
+    upper_border = std::max(0, target_upper_border - _search_rows);
+    lower_border = target_upper_border - 1;
+  }
+
+  roboenvcv::objectarea res;
+
+  for (int j = lower_border; j >= upper_border; --j) {
+    for (int i = target_left_border; i <= target_right_border; ++i) {
+      int idx = j * _cloud->width + i;
+
+      if (std::isnan(_cloud->points.at(idx).x)
+          || std::isnan(_cloud->points.at(idx).y)
+          || std::isnan(_cloud->points.at(idx).z))
+        continue;
+
+      if (_search_rows < 0) {
+        if (idx <= max_index) // already in indices
+          continue;
+      } else {
+        if (idx >= min_index) // already in indices
+          continue;
+      }
+
+      float diff;
+      if (_include_depths < 0)
+        diff = _target.center3d.z() - _cloud->points.at(idx).z;
+      else
+        diff = _cloud->points.at(idx).z - _target.center3d.z();
+
+      if (diff < fabs(_include_depths) && diff > 0) {
+        res.indices3d.push_back(idx);
+        res.center3d +=
+          Eigen::Vector3f(_cloud->points.at(idx).x,
+                          _cloud->points.at(idx).y,
+                          _cloud->points.at(idx).z);
+      }
+    }
+  }
+
+  // get 2d bounds
+  cv::Mat binary_img = cv::Mat::zeros(_cloud->height, _cloud->width, CV_8U);
+  int at = 0;
+  for (auto p = res.indices3d.begin(); p != res.indices3d.end(); ++p) {
+    int j = *p / _cloud->width;
+    int i = *p - j * _cloud->width;
+    binary_img.at<uchar>(j, i) = 255;
+  }
+  cv::Mat labeled_image;
+  cv::Mat stats;
+  cv::Mat centroids;
+  int n_labels =
+    cv::connectedComponentsWithStats(binary_img, labeled_image, stats, centroids);
+
+  int max_area = std::numeric_limits<int>::min();
+  float w_scale = _img.cols / _cloud->width;
+  float h_scale = _img.rows / _cloud->height;
+  for (int k = 1; k < n_labels; ++k) {
+    int *param = stats.ptr<int>(k);
+    int x = param[cv::ConnectedComponentsTypes::CC_STAT_LEFT];
+    int y = param[cv::ConnectedComponentsTypes::CC_STAT_TOP];
+    int height = param[cv::ConnectedComponentsTypes::CC_STAT_HEIGHT];
+    int width = param[cv::ConnectedComponentsTypes::CC_STAT_WIDTH];
+
+    if (param[cv::ConnectedComponentsTypes::CC_STAT_AREA] > max_area) {
+      res.bounds2d =
+        cv::Rect(x*w_scale, y*h_scale, width*w_scale, height*h_scale);
+      max_area = param[cv::ConnectedComponentsTypes::CC_STAT_AREA];
+    }
+  }
+
+  if (res.indices3d.size() > 0)
+    res.center3d /= res.indices3d.size();
+
+  return res;
+}
+
+//////////////////////////////////////////////////
 roboenvcv::graspconfig roboenvcv::ConfigurationFromLocal1DState
 (int _target, std::vector<roboenvcv::objectarea> &_scene,
  pcl::PointCloud<pcl::PointXYZRGB>::Ptr _cloud, cv::Mat &_img,
