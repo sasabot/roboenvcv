@@ -82,7 +82,33 @@ void Get3DdataFrom2DBounds(roboenvcv::objectarea &obj,
 std::pair<std::vector<roboenvcv::objectarea>,
           std::vector<roboenvcv::objectarea> > roboenvcv::DetectObjectnessArea
 (pcl::PointCloud<pcl::PointXYZRGB>::Ptr _cloud, cv::Mat &_img,
+ std::string _debug_folder, roboenvcv::detectsettings _settings)
+{
+  auto res = roboenvcv::DetectObjectnessArea
+    (_cloud, _img, cv::Vec3b(0, 0, 0), _debug_folder, _settings);
+  res.first.insert(res.first.end(), res.second.begin(), res.second.end());
+  res.second.clear();
+  return res;
+}
+
+//////////////////////////////////////////////////
+std::pair<std::vector<roboenvcv::objectarea>,
+          std::vector<roboenvcv::objectarea> > roboenvcv::DetectObjectnessArea
+(pcl::PointCloud<pcl::PointXYZRGB>::Ptr _cloud, cv::Mat &_img,
  cv::Vec3b _env_color, float _color_thre, float _dist_thre, std::string _debug_folder)
+{
+  roboenvcv::detectsettings settings;
+  settings.color_thre = _color_thre;
+  settings.dist_thre = _dist_thre;
+  return roboenvcv::DetectObjectnessArea
+    (_cloud, _img, _env_color, _debug_folder, settings);
+}
+
+//////////////////////////////////////////////////
+std::pair<std::vector<roboenvcv::objectarea>,
+          std::vector<roboenvcv::objectarea> > roboenvcv::DetectObjectnessArea
+(pcl::PointCloud<pcl::PointXYZRGB>::Ptr _cloud, cv::Mat &_img,
+ cv::Vec3b _env_color, std::string _debug_folder, roboenvcv::detectsettings _settings)
 {
   auto begin = std::chrono::high_resolution_clock::now();
 
@@ -103,7 +129,7 @@ std::pair<std::vector<roboenvcv::objectarea>,
 
   // cluster with region growing
   pcl::RegionGrowing<pcl::PointXYZRGB, pcl::Normal> reg;
-  reg.setMinClusterSize(100);
+  reg.setMinClusterSize(_settings.rg_min_cluster_size);
   reg.setMaxClusterSize(1000000);
   reg.setSearchMethod(tree);
   reg.setNumberOfNeighbours(10);
@@ -143,7 +169,7 @@ std::pair<std::vector<roboenvcv::objectarea>,
     std::vector<pcl::PointIndices> ec_clusters;
     pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
     ec.setClusterTolerance(0.02); // 2cm
-    ec.setMinClusterSize(50);
+    ec.setMinClusterSize(_settings.ec_min_cluster_size);
     ec.setMaxClusterSize(25000);
     ec.setSearchMethod(tree);
     ec.setInputCloud(cluster);
@@ -195,7 +221,7 @@ std::pair<std::vector<roboenvcv::objectarea>,
 
     center /= it->indices.size();
     normal /= it->indices.size();
-    if (center.norm() > _dist_thre) {
+    if (center.norm() > _settings.dist_thre) {
       it = clusters.erase(it);
       continue;
     }
@@ -212,133 +238,37 @@ std::pair<std::vector<roboenvcv::objectarea>,
   }
 
   // find indices without a cluster label
-  std::vector<uchar> indices_without_label(_cloud->points.size(), 255);
-  for (auto it = clusters.begin(); it != clusters.end(); ++it)
-    for (auto pit = it->indices.begin(); pit != it->indices.end(); ++pit)
-      indices_without_label[*pit] = 0;
-
-  // depth cut
-  for (auto it = _cloud->points.begin(); it != _cloud->points.end(); ++it)
-    if (it->z > _dist_thre)
-      indices_without_label[static_cast<int>(it - _cloud->points.begin())] = 0;
-
-  // binary cluster non-labeled regions
-  int bottom_row_cut = 5; // cut bottom of image as, usually NaN, and not reachable
   cv::Mat binary_img = cv::Mat::zeros(_cloud->height, _cloud->width, CV_8U);
-  int at = 0;
-  for (unsigned int i = 0; i < binary_img.rows - bottom_row_cut; ++i)
-    for (unsigned int j = 0; j < binary_img.cols; ++j)
-      binary_img.at<uchar>(i, j) = indices_without_label[at++];
-  cv::Mat labeled_image;
-  cv::Mat stats;
-  cv::Mat centroids;
-  int n_labels =
-    cv::connectedComponentsWithStats(binary_img, labeled_image, stats, centroids);
-
-  // analyze non-labeled regions
-  int noise_threshold = 50; // pixels
-  int outmost_label = -1;
-  int max_outmost_area = 0;
-  for (int k = 1; k < n_labels; ++k) {
-    int *param = stats.ptr<int>(k);
-    int x = param[cv::ConnectedComponentsTypes::CC_STAT_LEFT];
-    int y = param[cv::ConnectedComponentsTypes::CC_STAT_TOP];
-    int height = param[cv::ConnectedComponentsTypes::CC_STAT_HEIGHT];
-    int width = param[cv::ConnectedComponentsTypes::CC_STAT_WIDTH];
-
-    // remove noise
-    if (width * height < noise_threshold) continue;
-    // remove region adjacent to the edge of image
-    // this removes edge NaN noises all together
-    // but will also remove some connected regions as well
-    // note, often the NaN edges do connect to objects through object NaN borders
-    if (x == 0 || (x + width) == _cloud->width ||
-        y == 0 || (y + height) == _cloud->height) {
-      if (param[cv::ConnectedComponentsTypes::CC_STAT_AREA] > max_outmost_area) {
-        outmost_label = k; // keep track of largest edge region
-        max_outmost_area = param[cv::ConnectedComponentsTypes::CC_STAT_AREA];
-      }
-      continue;
-    }
-
-    // given region, conduct border suppression
-
-    // get roi
-    cv::Mat roi = binary_img(cv::Rect(x, y, width, height));
-
-    // find contours destroyes image, so clone
-    std::vector<std::vector<cv::Point> > contours;
-    cv::findContours(roi.clone(), contours, CV_RETR_LIST, CV_CHAIN_APPROX_NONE);
-
-    // break region apart by suppressing contours
-    int suppress_margin = 6;
-    for (auto contour = contours.begin(); contour != contours.end(); ++contour)
-      cv::polylines(roi, *contour, true, cv::Scalar(0), suppress_margin);
-
-    // get new clusters
-    cv::Mat labeled_image;
-    cv::Mat stats;
-    cv::Mat centroids;
-    int n_labels =
-      cv::connectedComponentsWithStats(roi, labeled_image, stats, centroids, 4);
-
-    // add object to scene
-    int lower_noise_threshold = 10;
-    for (int k = 1; k < n_labels; ++k) {
-      int *param = stats.ptr<int>(k);
-      int x_k = x + param[cv::ConnectedComponentsTypes::CC_STAT_LEFT];
-      int y_k = y + param[cv::ConnectedComponentsTypes::CC_STAT_TOP];
-      int height_k = param[cv::ConnectedComponentsTypes::CC_STAT_HEIGHT];
-      int width_k = param[cv::ConnectedComponentsTypes::CC_STAT_WIDTH];
-
-      // remove noise
-      if (width_k * height_k < lower_noise_threshold) continue;
-
-      roboenvcv::objectarea obj;
-      // get 3d data and color data
-      Get3DdataFrom2DBounds(obj, x_k, y_k, width_k, height_k, k,
-                            labeled_image, _cloud, normals);
-      obj.bounds2d =
-        cv::Rect(x_k*w_scale, y_k*h_scale, width_k*w_scale, height_k*h_scale);
-      scene.push_back(obj);
-    }
-  }
-
-  // largest edge region usually has a complex over connection
-  // break region apart by suppressing countour regions
-  // why this works: connections are usually due to undefined object edges
-  // the suppression eliminates such undefined edges
   cv::Mat outmost(_cloud->height, _cloud->width, CV_8U);
-  if (outmost_label > 0) {
+  int outmost_label = -1;
+  if (_settings.second_clustering) {
+    std::vector<uchar> indices_without_label(_cloud->points.size(), 255);
+    for (auto it = clusters.begin(); it != clusters.end(); ++it)
+      for (auto pit = it->indices.begin(); pit != it->indices.end(); ++pit)
+        indices_without_label[*pit] = 0;
+
+    // depth cut
+    for (auto it = _cloud->points.begin(); it != _cloud->points.end(); ++it)
+      if (it->z > _settings.dist_thre)
+        indices_without_label[static_cast<int>(it - _cloud->points.begin())] = 0;
+
+    // binary cluster non-labeled regions
+    int bottom_row_cut = 5; // cut bottom of image as, usually NaN, and not reachable
+    // cv::Mat binary_img = cv::Mat::zeros(_cloud->height, _cloud->width, CV_8U);
     int at = 0;
-    for (unsigned int i = 0; i < labeled_image.rows; ++i)
-      for (unsigned int j = 0; j < labeled_image.cols; ++j)
-        if (labeled_image.at<int>(i, j) == outmost_label)
-          outmost.at<uchar>(i, j) = 255;
-        else
-          outmost.at<uchar>(i, j) = 0;
-
-    // find contours destroyes image, so clone
-    std::vector<std::vector<cv::Point> > contours;
-    cv::findContours(outmost.clone(), contours, CV_RETR_LIST, CV_CHAIN_APPROX_NONE);
-
-    // break region apart by suppressing contours
-    int suppress_margin = 6;
-    for (auto contour = contours.begin(); contour != contours.end(); ++contour)
-      cv::polylines(outmost, *contour, true, cv::Scalar(0), suppress_margin);
-
-    // get new clusters
+    for (unsigned int i = 0; i < binary_img.rows - bottom_row_cut; ++i)
+      for (unsigned int j = 0; j < binary_img.cols; ++j)
+        binary_img.at<uchar>(i, j) = indices_without_label[at++];
     cv::Mat labeled_image;
     cv::Mat stats;
     cv::Mat centroids;
     int n_labels =
-      cv::connectedComponentsWithStats(outmost, labeled_image, stats, centroids, 4);
+      cv::connectedComponentsWithStats(binary_img, labeled_image, stats, centroids);
 
-    // add clusters to list if not too small
-    // because, clusters were suppressed, use a lower noise threshold
-    // the upper threshold will remove backgrounds
-    int lower_noise_threshold = 30;
-    int upper_noise_threshold = 300;
+    // analyze non-labeled regions
+    int noise_threshold = 50; // pixels
+    // int outmost_label = -1;
+    int max_outmost_area = 0;
     for (int k = 1; k < n_labels; ++k) {
       int *param = stats.ptr<int>(k);
       int x = param[cv::ConnectedComponentsTypes::CC_STAT_LEFT];
@@ -347,24 +277,125 @@ std::pair<std::vector<roboenvcv::objectarea>,
       int width = param[cv::ConnectedComponentsTypes::CC_STAT_WIDTH];
 
       // remove noise
-      if (width * height < lower_noise_threshold) continue;
+      if (width * height < noise_threshold) continue;
+      // remove region adjacent to the edge of image
+      // this removes edge NaN noises all together
+      // but will also remove some connected regions as well
+      // note, often the NaN edges do connect to objects through object NaN borders
+      if (x == 0 || (x + width) == _cloud->width ||
+          y == 0 || (y + height) == _cloud->height) {
+        if (param[cv::ConnectedComponentsTypes::CC_STAT_AREA] > max_outmost_area) {
+          outmost_label = k; // keep track of largest edge region
+          max_outmost_area = param[cv::ConnectedComponentsTypes::CC_STAT_AREA];
+        }
+        continue;
+      }
 
-      // big clusters nearby camera are likely to be objects, so do not remove
-      // when the bound of background clusters covers the whole image,
-      // the cluster center is the center of image
-      // the distance threshold is set so that such clusters are removed
-      if (y + 0.5 * height <= 0.5 * _cloud->height + 1)
-        if (param[cv::ConnectedComponentsTypes::CC_STAT_AREA]
-            > upper_noise_threshold)
-          continue;
+      // given region, conduct border suppression
 
-      roboenvcv::objectarea obj;
-      // get current cluster and 3d data + color data
-      Get3DdataFrom2DBounds(obj, x, y, width, height, k,
-                            labeled_image, _cloud, normals);
-      obj.bounds2d =
-        cv::Rect(x*w_scale, y*h_scale, width*w_scale, height*h_scale);
-      scene.push_back(obj);
+      // get roi
+      cv::Mat roi = binary_img(cv::Rect(x, y, width, height));
+
+      // find contours destroyes image, so clone
+      std::vector<std::vector<cv::Point> > contours;
+      cv::findContours(roi.clone(), contours, CV_RETR_LIST, CV_CHAIN_APPROX_NONE);
+
+      // break region apart by suppressing contours
+      int suppress_margin = 6;
+      for (auto contour = contours.begin(); contour != contours.end(); ++contour)
+        cv::polylines(roi, *contour, true, cv::Scalar(0), suppress_margin);
+
+      // get new clusters
+      cv::Mat labeled_image;
+      cv::Mat stats;
+      cv::Mat centroids;
+      int n_labels =
+        cv::connectedComponentsWithStats(roi, labeled_image, stats, centroids, 4);
+
+      // add object to scene
+      int lower_noise_threshold = 10;
+      for (int k = 1; k < n_labels; ++k) {
+        int *param = stats.ptr<int>(k);
+        int x_k = x + param[cv::ConnectedComponentsTypes::CC_STAT_LEFT];
+        int y_k = y + param[cv::ConnectedComponentsTypes::CC_STAT_TOP];
+        int height_k = param[cv::ConnectedComponentsTypes::CC_STAT_HEIGHT];
+        int width_k = param[cv::ConnectedComponentsTypes::CC_STAT_WIDTH];
+
+        // remove noise
+        if (width_k * height_k < lower_noise_threshold) continue;
+
+        roboenvcv::objectarea obj;
+        // get 3d data and color data
+        Get3DdataFrom2DBounds(obj, x_k, y_k, width_k, height_k, k,
+                              labeled_image, _cloud, normals);
+        obj.bounds2d =
+          cv::Rect(x_k*w_scale, y_k*h_scale, width_k*w_scale, height_k*h_scale);
+        scene.push_back(obj);
+      }
+    }
+
+    // largest edge region usually has a complex over connection
+    // break region apart by suppressing countour regions
+    // why this works: connections are usually due to undefined object edges
+    // the suppression eliminates such undefined edges
+    // cv::Mat outmost(_cloud->height, _cloud->width, CV_8U);
+    if (outmost_label > 0) {
+      int at = 0;
+      for (unsigned int i = 0; i < labeled_image.rows; ++i)
+        for (unsigned int j = 0; j < labeled_image.cols; ++j)
+          if (labeled_image.at<int>(i, j) == outmost_label)
+            outmost.at<uchar>(i, j) = 255;
+          else
+            outmost.at<uchar>(i, j) = 0;
+
+      // find contours destroyes image, so clone
+      std::vector<std::vector<cv::Point> > contours;
+      cv::findContours(outmost.clone(), contours, CV_RETR_LIST, CV_CHAIN_APPROX_NONE);
+
+      // break region apart by suppressing contours
+      int suppress_margin = 6;
+      for (auto contour = contours.begin(); contour != contours.end(); ++contour)
+        cv::polylines(outmost, *contour, true, cv::Scalar(0), suppress_margin);
+
+      // get new clusters
+      cv::Mat labeled_image;
+      cv::Mat stats;
+      cv::Mat centroids;
+      int n_labels =
+        cv::connectedComponentsWithStats(outmost, labeled_image, stats, centroids, 4);
+
+      // add clusters to list if not too small
+      // because, clusters were suppressed, use a lower noise threshold
+      // the upper threshold will remove backgrounds
+      int lower_noise_threshold = 30;
+      int upper_noise_threshold = 300;
+      for (int k = 1; k < n_labels; ++k) {
+        int *param = stats.ptr<int>(k);
+        int x = param[cv::ConnectedComponentsTypes::CC_STAT_LEFT];
+        int y = param[cv::ConnectedComponentsTypes::CC_STAT_TOP];
+        int height = param[cv::ConnectedComponentsTypes::CC_STAT_HEIGHT];
+        int width = param[cv::ConnectedComponentsTypes::CC_STAT_WIDTH];
+
+        // remove noise
+        if (width * height < lower_noise_threshold) continue;
+
+        // big clusters nearby camera are likely to be objects, so do not remove
+        // when the bound of background clusters covers the whole image,
+        // the cluster center is the center of image
+        // the distance threshold is set so that such clusters are removed
+        if (y + 0.5 * height <= 0.5 * _cloud->height + 1)
+          if (param[cv::ConnectedComponentsTypes::CC_STAT_AREA]
+              > upper_noise_threshold)
+            continue;
+
+        roboenvcv::objectarea obj;
+        // get current cluster and 3d data + color data
+        Get3DdataFrom2DBounds(obj, x, y, width, height, k,
+                              labeled_image, _cloud, normals);
+        obj.bounds2d =
+          cv::Rect(x*w_scale, y*h_scale, width*w_scale, height*h_scale);
+        scene.push_back(obj);
+      }
     }
   }
 
@@ -405,7 +436,7 @@ std::pair<std::vector<roboenvcv::objectarea>,
     for (auto c = dominant_colors.begin(); c != dominant_colors.end(); ++c)
       if (roboenvcv::distance(roboenvcv::rgb2lab(*c),
                                  roboenvcv::rgb2lab(_env_color))
-          < _color_thre)
+          < _settings.color_thre)
         ++matches;
     if (matches >= expected_matches) { // if likely environment
       if (_debug_folder != "")
@@ -486,9 +517,11 @@ std::pair<std::vector<roboenvcv::objectarea>,
 
     // show results
 
-    cv::imwrite(_debug_folder + "objectness_mid1.jpg", binary_img);
-    if (outmost_label > 0)
-      cv::imwrite(_debug_folder + "objectness_mid2.jpg", outmost);
+    if (_settings.second_clustering) {
+      cv::imwrite(_debug_folder + "objectness_mid1.jpg", binary_img);
+      if (outmost_label > 0)
+        cv::imwrite(_debug_folder + "objectness_mid2.jpg", outmost);
+    }
     cv::imwrite(_debug_folder + "objectness.jpg", _img);
   }
 

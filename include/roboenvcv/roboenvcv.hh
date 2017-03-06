@@ -35,6 +35,28 @@ namespace roboenvcv
   /// @param[in] _cloud Point cloud from sensor (low resolution for performance).
   /// @param[in] _img Image from sensor (for resolution ratio and drawing).
   /// @param[in] _env_color Color of environment to remove from object list.
+  /// @param[in] _debug_folder Folder to save process images. No save if empty.
+  /// @param[in] _settings Optional settings for detection.
+  /// @return {List of detected objects, List of detected environment}
+  std::pair<std::vector<objectarea>, std::vector<objectarea> > DetectObjectnessArea
+  (pcl::PointCloud<pcl::PointXYZRGB>::Ptr _cloud,
+   cv::Mat &_img, cv::Vec3b _env_color, std::string _debug_folder="",
+   detectsettings _settings=detectsettings());
+
+  /// @brief DetectObjectnessArea without background color subtraction.
+  /// @param[in] _cloud Point cloud from sensor (low resolution for performance).
+  /// @param[in] _img Image from sensor (for resolution ratio and drawing).
+  /// @param[in] _debug_folder Folder to save process images. No save if empty.
+  /// @param[in] _settings Optional settings for detection.
+  /// @return {List of detected objects, }
+  std::pair<std::vector<objectarea>, std::vector<objectarea> > DetectObjectnessArea
+  (pcl::PointCloud<pcl::PointXYZRGB>::Ptr _cloud,
+   cv::Mat &_img, std::string _debug_folder="", detectsettings _settings=detectsettings());
+
+  /// @brief DetectObjectnessArea with threshold arguments. (beta-type function)
+  /// @param[in] _cloud Point cloud from sensor (low resolution for performance).
+  /// @param[in] _img Image from sensor (for resolution ratio and drawing).
+  /// @param[in] _env_color Color of environment to remove from object list.
   /// @param[in] _color_thre Color distance threshold to label as background color.
   /// @param[in] _dist_thre Distance threshold to eliminate from ROI.
   /// @param[in] _debug_folder Folder to save process images. No save if empty.

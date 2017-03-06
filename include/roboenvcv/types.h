@@ -11,6 +11,23 @@
 
 namespace roboenvcv
 {
+  /// @brief Detection settings.
+  struct detectsettings {
+    detectsettings() {
+      color_thre = 20;
+      dist_thre = 1.2;
+      rg_min_cluster_size = 100;
+      ec_min_cluster_size = 50;
+      second_clustering = true;
+    };
+
+    float color_thre;
+    float dist_thre;
+    float rg_min_cluster_size;
+    float ec_min_cluster_size;
+    bool second_clustering;
+  };
+
   /// @brief Identified information of object.
   struct objectproperties {
     std::vector<std::string> name;
