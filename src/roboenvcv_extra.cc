@@ -43,7 +43,8 @@ std::vector<int> roboenvcv::FindTargetWithOcr
       if (word == "") { // object has no result, go to next object
         go_to_next = true;
         break;
-      } else if (str->find(word) != std::string::npos) {
+      } else if (str->find(word) != std::string::npos ||
+                 word.find(*str) != std::string::npos) {
         candidates.push_back({i, static_cast<int>(str - _target_name.begin())});
         go_to_next = true;
         break; // found best result, go to next object 
