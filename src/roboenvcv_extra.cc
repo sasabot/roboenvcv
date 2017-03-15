@@ -1,6 +1,34 @@
 #include "roboenvcv/roboenvcv_extra.hh"
 
 //////////////////////////////////////////////////
+void roboenvcv::PatchBoundsForOcr
+(roboenvcv::objectarea &_it, cv::Mat &_img, float _margin_top,
+ float _margin_right, float _margin_bottom, float _margin_left)
+{
+  int margin_left = _margin_left;
+  _it.bounds2d.x -= margin_left;
+  if (_it.bounds2d.x < 0) {
+    _it.bounds2d.x = 0;
+    margin_left = _it.bounds2d.x;
+  }
+
+  _it.bounds2d.width += margin_left + _margin_right;
+  if (_it.bounds2d.x + _it.bounds2d.width >= _img.cols)
+    _it.bounds2d.width = _img.cols - _it.bounds2d.x;
+
+  int margin_top = _margin_top;
+  _it.bounds2d.y -= margin_top;
+  if (_it.bounds2d.y < 0) {
+    _it.bounds2d.y = 0;
+    margin_top = _it.bounds2d.y;
+  }
+
+  _it.bounds2d.height += margin_top + _margin_bottom;
+  if (_it.bounds2d.y + _it.bounds2d.height >= _img.rows)
+    _it.bounds2d.height = _img.rows - _it.bounds2d.y;
+}
+
+//////////////////////////////////////////////////
 std::vector<int> roboenvcv::FindTargetWithOcr
 (std::vector<std::string> _target_name, std::vector<roboenvcv::objectarea> &_scene,
  cv::Mat &_img, windows::interface::WindowsInterfacePtr _windows,
