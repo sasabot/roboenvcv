@@ -2,7 +2,9 @@
 #define _ROBOENVCV_INTERACTION_
 
 #include "roboenvcv/types.h"
-#include <pcl/PCLPointCloud2.h>
+#include <pcl/common/projection_matrix.h>
+#include <pcl/point_types.h>
+#include <pcl/impl/point_types.hpp>
 
 namespace roboenvcv
 {
