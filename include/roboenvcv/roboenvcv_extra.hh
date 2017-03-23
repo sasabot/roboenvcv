@@ -4,6 +4,9 @@
 #include "roboenvcv/types.h"
 #include "linux_kinect/WindowsInterface.hh"
 
+#include <tuple>
+#include <algorithm>
+
 namespace roboenvcv
 {
   void PatchBoundsForOcr

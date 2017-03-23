@@ -58,28 +58,54 @@ std::vector<int> roboenvcv::FindTargetWithOcr
   // longer match is better match, we want to find best match first
   std::sort(_target_name.begin(), _target_name.end(),
             [](std::string a, std::string b){return (a.length() > b.length());});
+
   for (unsigned int i = 0; i < _scene.size(); ++i) {
     auto obj = _scene.begin() + i;
     if (!obj->visible3d) continue; // for now, ignore non-visible objects
+    // get ocr result of i-th object
     auto res = ocr.begin() + i;
+    // if object has no result, go to next object
+    if (res->at(0) == "" && res->at(1) == "") {
+      obj->properties.likeliness = 0.0;
+      continue;
+    }
+
+    // target name allows mixture of English and Japanese candidates
     bool go_to_next = false;
     for (auto str = _target_name.begin(); str != _target_name.end(); ++str) {
       // OCR result is first name English, second name Japanese
       std::string word = res->at(0);
       // if byte is multi byte, use second name
       if ((0x80 & (*str)[0]) != 0) word = res->at(1);
-      if (word == "") { // object has no result, go to next object
-        go_to_next = true;
-        break;
-      } else if (str->find(word) != std::string::npos ||
-                 word.find(*str) != std::string::npos) {
+      // remove spaces
+      word.erase(std::remove_if(word.begin(), word.end(), ::isspace), word.end());
+      str->erase(std::remove_if(str->begin(), str->end(), ::isspace), str->end());
+      if (str->find(word) != std::string::npos ||
+          word.find(*str) != std::string::npos) {
         candidates.push_back({i, static_cast<int>(str - _target_name.begin())});
         go_to_next = true;
-        break; // found best result, go to next object 
+        obj->properties.likeliness = 1.0 * std::min(word.length(), str->length());
+        break; // found best result, go to next object
       }
     }
-    if (!go_to_next) // this means some words were at least found
+
+    if (!go_to_next) { // this means some words were at least found
       candidates.push_back({i, _target_name.size()});
+      // rate score with number of unique letter matches
+      std::string word = res->at(0);
+      if (((0x80 & (_target_name.at(0))[0]) != 0 && res->at(1) != "")
+          || res->at(0) == "") // accept non null result
+        word = res->at(1);
+      std::string unique_word = word;
+      std::sort(unique_word.begin(), unique_word.end());
+      unique_word.erase(std::unique(unique_word.begin(), unique_word.end()),
+                        unique_word.end());
+      int letter_matches = 0;
+      for (unsigned int c = 0; c < unique_word.length(); ++c)
+        if (_target_name.begin()->find(unique_word.at(c)) != std::string::npos)
+          ++letter_matches;
+      obj->properties.likeliness = 0.1 * letter_matches;
+    }
   }
 
   if (candidates.size() == 0) // if no candidates, return
@@ -92,30 +118,37 @@ std::vector<int> roboenvcv::FindTargetWithOcr
             });
 
   // divide candidates into field and add to result
-  std::vector<std::vector<std::pair<int, float>> > ordered_candidates(1);
+  std::vector<std::vector<std::tuple<int, float, float>> > ordered_candidates(1);
   auto oc = ordered_candidates.begin();
   float best_score = candidates.begin()->second;
   for (auto obj = candidates.begin(); obj != candidates.end(); ++obj) {
     auto s = _scene.begin() + obj->first;
     if (obj->second == best_score) {
-      oc->push_back({obj->first, s->center3d.norm()});
+      oc->push_back(std::tuple<int, float, float>
+                    (obj->first, s->properties.likeliness, s->center3d.norm()));
     } else { // if not same score, add to next field
       best_score = obj->second;
-      ordered_candidates.push_back({{obj->first, s->center3d.norm()}});
+      ordered_candidates.push_back
+        ({std::tuple<int, float, float>
+            (obj->first, s->properties.likeliness, s->center3d.norm())});
       oc = ordered_candidates.end() - 1;
     }
   }
 
-  // sort matches by distance and add to result
+  // sort matches by likeliness score, if same score sort by distance
   std::vector<int> result(candidates.size());
   auto it = result.begin();
   for (auto c = ordered_candidates.begin(); c != ordered_candidates.end(); ++c) {
     std::sort(c->begin(), c->end(),
-              [](std::pair<int, float> x, std::pair<int, float> y){
-                return (x.second < y.second);
+              [](std::tuple<int, float, float> x,
+                 std::tuple<int, float, float> y) {
+                if (fabs(std::get<1>(x) - std::get<1>(y)) < 0.001) // same score
+                  return (std::get<2>(x) < std::get<2>(y)); // sort by distance
+                else
+                  return (std::get<1>(x) > std::get<1>(y)); // sort by score
               });
     for (auto obj = c->begin(); obj != c->end(); ++obj)
-      *it++ = obj->first;
+      *it++ = std::get<0>(*obj);
   }
 
   return result;
