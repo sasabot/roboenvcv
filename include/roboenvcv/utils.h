@@ -26,7 +26,7 @@ namespace roboenvcv
       + std::to_string(localdate->tm_sec) + "s";
     const int err = mkdir(dbgfolder.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
     if (err == -1) {
-      printf("failed to create log directory aborting!");
+      printf("failed to create log directory aborting!\n");
       std::abort();
     }
     dbgfolder += "/"; // requires external slash
@@ -38,7 +38,7 @@ namespace roboenvcv
   /// @param[in] _indices The indices of objects to retrieve.
   /// @return List of objects from applied indices.
   std::vector<objectarea> filter
-    (std::vector<objectarea> _objects, std::vector<int> _indices)
+    (std::vector<objectarea> &_objects, std::vector<int> &_indices)
   {
     std::vector<objectarea> result;
     for (auto it = _indices.begin(); it != _indices.end(); ++it)
@@ -57,6 +57,20 @@ namespace roboenvcv
   {
     Eigen::Vector3f w = _obj.center3d - _env.center3d;
     return fabs(_env.normal3d.dot(w));
+  }
+
+  /// @brief Print object name properties (e.g. OCR result).
+  /// @param[in] _objects List of objects to print name properties.
+  void printNameProperties(std::vector<objectarea> &_objects)
+  {
+    printf("printing properties\n-------\n");
+    for (auto obj = _objects.begin(); obj != _objects.end(); ++obj) {
+      for (auto txt = obj->properties.name.begin();
+           txt != obj->properties.name.end(); ++txt)
+        printf("%s (%f)\n", txt->c_str(), obj->properties.likeliness);
+      printf("-------\n");
+    }
+    printf("finshed printing properties\n");
   }
 }
 

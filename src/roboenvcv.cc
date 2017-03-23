@@ -683,6 +683,18 @@ roboenvcv::objectarea patchGrowth
 }
 
 //////////////////////////////////////////////////
+void roboenvcv::drawBestMatch
+(std::vector<roboenvcv::objectarea> &_objects, cv::Mat &_img,
+ std::vector<int> &_sorted_idx, cv::Scalar _color)
+{
+  for (auto it = _sorted_idx.begin(); it != _sorted_idx.end(); ++it) {
+    auto obj = _objects.begin() + *it;
+    int k = static_cast<int>(it - _sorted_idx.begin()) * 2;
+    cv::rectangle(_img, obj->bounds2d, _color, std::max(2, 10 - k));
+  }
+}
+
+//////////////////////////////////////////////////
 roboenvcv::graspconfig roboenvcv::ConfigurationFromLocal1DState
 (int _target, std::vector<roboenvcv::objectarea> &_scene,
  pcl::PointCloud<pcl::PointXYZRGB>::Ptr _cloud, cv::Mat &_img,

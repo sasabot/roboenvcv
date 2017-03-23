@@ -89,6 +89,15 @@ namespace roboenvcv
   (objectarea _target, int _search_rows, float _include_depths,
    pcl::PointCloud<pcl::PointXYZRGB>::Ptr _cloud, cv::Mat _img);
 
+  /// @brief Draw box around best match using sorted indices.
+  /// @param[in] _objects List of detected objects.
+  /// @param[in] _img Image to draw result on (same as image used for detecting).
+  /// @param[in] _sorted_idx Sorted index in best match order.
+  /// @param[in] _color Color of box around best match.
+  void drawBestMatch
+  (std::vector<objectarea> &_objects, cv::Mat &_img, std::vector<int> &_sorted_idx,
+   cv::Scalar _color=cv::Scalar(0, 0, 255));
+
   /// @brief Detect object information in relation to environment for grasping.
   /// @param[in] _target Id of target in vector _scene.
   /// @param[in] _scene List of objects to consider when analyzing.

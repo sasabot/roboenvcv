@@ -33,6 +33,8 @@ namespace roboenvcv
     std::vector<std::string> name;
     /// @brief List of named colors with percentage information.
     std::vector<std::pair<std::string, float> > colors;
+    /// @brief Variable to save likeliness score of object.
+    float likeliness;
   };
 
   /// @brief Information of detected object.
