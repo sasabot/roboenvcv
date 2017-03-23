@@ -249,7 +249,10 @@ std::pair<std::vector<roboenvcv::objectarea>,
 
     // depth cut
     for (auto it = _cloud->points.begin(); it != _cloud->points.end(); ++it)
-      if (it->z > _settings.dist_thre)
+      if (_settings.remove_nan_in_sc &&
+          std::isnan(it->x) || std::isnan(it->y) || std::isnan(it->z))
+        indices_without_label[static_cast<int>(it - _cloud->points.begin())] = 0;
+      else if (it->z > _settings.dist_thre)
         indices_without_label[static_cast<int>(it - _cloud->points.begin())] = 0;
 
     // binary cluster non-labeled regions
@@ -288,6 +291,19 @@ std::pair<std::vector<roboenvcv::objectarea>,
           outmost_label = k; // keep track of largest edge region
           max_outmost_area = param[cv::ConnectedComponentsTypes::CC_STAT_AREA];
         }
+        continue;
+      }
+
+      // no compression when NaN values are removed
+      // region with missing points will be eliminated if so
+      if (_settings.remove_nan_in_sc) {
+        roboenvcv::objectarea obj;
+        // get 3d data and color data
+        Get3DdataFrom2DBounds(obj, x, y, width, height, k,
+                              labeled_image, _cloud, normals);
+        obj.bounds2d =
+          cv::Rect(x*w_scale, y*h_scale, width*w_scale, height*h_scale);
+        scene.push_back(obj);
         continue;
       }
 
@@ -338,8 +354,7 @@ std::pair<std::vector<roboenvcv::objectarea>,
     // break region apart by suppressing countour regions
     // why this works: connections are usually due to undefined object edges
     // the suppression eliminates such undefined edges
-    // cv::Mat outmost(_cloud->height, _cloud->width, CV_8U);
-    if (outmost_label > 0) {
+    if (outmost_label > 0 && !_settings.remove_nan_in_sc) {
       int at = 0;
       for (unsigned int i = 0; i < labeled_image.rows; ++i)
         for (unsigned int j = 0; j < labeled_image.cols; ++j)

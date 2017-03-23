@@ -19,6 +19,7 @@ namespace roboenvcv
       rg_min_cluster_size = 100;
       ec_min_cluster_size = 50;
       second_clustering = true;
+      remove_nan_in_sc = true;
     };
 
     float color_thre;
@@ -26,6 +27,7 @@ namespace roboenvcv
     float rg_min_cluster_size;
     float ec_min_cluster_size;
     bool second_clustering;
+    bool remove_nan_in_sc;
   };
 
   /// @brief Identified information of object.
