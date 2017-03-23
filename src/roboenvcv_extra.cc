@@ -54,7 +54,7 @@ std::vector<int> roboenvcv::FindTargetWithOcr
   }
 
   // find best matches
-  std::vector<std::pair<int, int> > candidates;
+  std::vector<std::tuple<int, float, float> > candidates;
   // longer match is better match, we want to find best match first
   std::sort(_target_name.begin(), _target_name.end(),
             [](std::string a, std::string b){return (a.length() > b.length());});
@@ -76,21 +76,23 @@ std::vector<int> roboenvcv::FindTargetWithOcr
       // OCR result is first name English, second name Japanese
       std::string word = res->at(0);
       // if byte is multi byte, use second name
-      if ((0x80 & (*str)[0]) != 0) word = res->at(1);
+      if (((0x80 & (*str)[0]) != 0 && res->at(1) != "")
+          || res->at(0) == "") // accept non null result
+        word = res->at(1);
       // remove spaces
       word.erase(std::remove_if(word.begin(), word.end(), ::isspace), word.end());
       str->erase(std::remove_if(str->begin(), str->end(), ::isspace), str->end());
       if (str->find(word) != std::string::npos ||
           word.find(*str) != std::string::npos) {
-        candidates.push_back({i, static_cast<int>(str - _target_name.begin())});
         go_to_next = true;
         obj->properties.likeliness = 1.0 * std::min(word.length(), str->length());
+        candidates.push_back(std::tuple<int, float, float>
+                             (i, obj->properties.likeliness, obj->center3d.norm()));
         break; // found best result, go to next object
       }
     }
 
     if (!go_to_next) { // this means some words were at least found
-      candidates.push_back({i, _target_name.size()});
       // rate score with number of unique letter matches
       std::string word = res->at(0);
       if (((0x80 & (_target_name.at(0))[0]) != 0 && res->at(1) != "")
@@ -105,51 +107,28 @@ std::vector<int> roboenvcv::FindTargetWithOcr
         if (_target_name.begin()->find(unique_word.at(c)) != std::string::npos)
           ++letter_matches;
       obj->properties.likeliness = 0.1 * letter_matches;
+      candidates.push_back(std::tuple<int, float, float>
+                           (i, obj->properties.likeliness, obj->center3d.norm()));
     }
   }
 
   if (candidates.size() == 0) // if no candidates, return
     return std::vector<int> {};
 
-  // order candidates with best match
+  // sort matches by likeliness score, if same score sort by distance
   std::sort(candidates.begin(), candidates.end(),
-            [](std::pair<int, float> x, std::pair<int, float> y){
-              return (x.second < y.second);
+            [](std::tuple<int, float, float> x,
+               std::tuple<int, float, float> y) {
+              if (fabs(std::get<1>(x) - std::get<1>(y)) < 0.001) // same score
+                return (std::get<2>(x) < std::get<2>(y)); // sort by distance
+              else
+                return (std::get<1>(x) > std::get<1>(y)); // sort by score
             });
 
-  // divide candidates into field and add to result
-  std::vector<std::vector<std::tuple<int, float, float>> > ordered_candidates(1);
-  auto oc = ordered_candidates.begin();
-  float best_score = candidates.begin()->second;
-  for (auto obj = candidates.begin(); obj != candidates.end(); ++obj) {
-    auto s = _scene.begin() + obj->first;
-    if (obj->second == best_score) {
-      oc->push_back(std::tuple<int, float, float>
-                    (obj->first, s->properties.likeliness, s->center3d.norm()));
-    } else { // if not same score, add to next field
-      best_score = obj->second;
-      ordered_candidates.push_back
-        ({std::tuple<int, float, float>
-            (obj->first, s->properties.likeliness, s->center3d.norm())});
-      oc = ordered_candidates.end() - 1;
-    }
-  }
-
-  // sort matches by likeliness score, if same score sort by distance
   std::vector<int> result(candidates.size());
   auto it = result.begin();
-  for (auto c = ordered_candidates.begin(); c != ordered_candidates.end(); ++c) {
-    std::sort(c->begin(), c->end(),
-              [](std::tuple<int, float, float> x,
-                 std::tuple<int, float, float> y) {
-                if (fabs(std::get<1>(x) - std::get<1>(y)) < 0.001) // same score
-                  return (std::get<2>(x) < std::get<2>(y)); // sort by distance
-                else
-                  return (std::get<1>(x) > std::get<1>(y)); // sort by score
-              });
-    for (auto obj = c->begin(); obj != c->end(); ++obj)
-      *it++ = std::get<0>(*obj);
-  }
+  for (auto c = candidates.begin(); c != candidates.end(); ++c)
+    *it++ = std::get<0>(*c);
 
   return result;
 }
