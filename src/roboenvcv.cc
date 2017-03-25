@@ -547,6 +547,12 @@ std::pair<std::vector<roboenvcv::objectarea>,
 std::vector<int> roboenvcv::FindTarget
 (std::string _target_color, std::vector<roboenvcv::objectarea> &_scene)
 {
+  if (_target_color == "any") {
+    std::vector<int> result(_scene.size());
+    std::iota(std::begin(result), std::end(result), 0);
+    return result;
+  }
+
   std::vector<std::pair<int, float> > candidates;
 
   for (auto obj = _scene.begin(); obj != _scene.end(); ++obj) {

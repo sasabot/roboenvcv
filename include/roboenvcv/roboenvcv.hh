@@ -26,6 +26,8 @@
 #include "roboenvcv/types.h"
 #include "roboenvcv/utils.h"
 
+#include <numeric>
+
 namespace roboenvcv
 {
   /// @brief Detect area where objects likely exist with 3d region growing.
