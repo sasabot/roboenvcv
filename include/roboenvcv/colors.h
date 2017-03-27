@@ -255,7 +255,7 @@ namespace roboenvcv
                        std::vector<std::pair<std::string, float> > &_res,
                        const std::map<std::string, cv::Vec3b> &_map)
     {
-      std::vector<std::string> names(_colors.size());
+      std::vector<std::pair<std::string, float> > names(_colors.size());
 
       // for each color value, find color of nearest distance
       for (auto c = _colors.begin(); c != _colors.end(); ++c) {
@@ -269,9 +269,11 @@ namespace roboenvcv
               continue; // requires strict threshold
           if (dist < min_dist) {
             min_dist = dist;
-            *n = m->first;
+            n->first = m->first;
           }
         }
+
+        n->second = 1.0 - min_dist * 0.01;
       }
 
       _res.clear();
@@ -280,14 +282,14 @@ namespace roboenvcv
         bool color_exists = false;
         // check if color has already been added to result
         for (auto p = _res.begin(); p != _res.end(); ++p)
-          if (p->first == *n) { // if already exists, count
-            p->second += percentage;
+          if (p->first == n->first) { // if already exists, count
+            p->second += percentage * n->second;
             color_exists = true;
             break;
           }
         if (color_exists) continue;
         // color has not yet been added, add to result
-        _res.push_back({*n, percentage});
+        _res.push_back({n->first, percentage * n->second});
       }
     };
 

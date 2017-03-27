@@ -486,8 +486,14 @@ std::pair<std::vector<roboenvcv::objectarea>,
   if (_debug_folder != "") {
     // draw bounds2d
 
-    for (auto it = scene.begin(); it < scene.begin() + clusters.size(); ++it) {
-      cv::rectangle(_img, it->bounds2d, cv::Scalar(0, 255, 0), 2);
+    for (auto it = scene.begin(); it != scene.end(); ++it) {
+      if (it < scene.begin() + clusters.size())
+        cv::rectangle(_img, it->bounds2d, cv::Scalar(0, 255, 0), 2);
+      else
+        cv::rectangle(_img, it->bounds2d, cv::Scalar(255, 0, 0), 2);
+
+      if (!it->visible3d)
+        continue;
 
       // write color properties info
       std::string text = "";
@@ -513,24 +519,6 @@ std::pair<std::vector<roboenvcv::objectarea>,
                cv::Scalar(255, 255, 0));
       cv::circle(_img, cv::Point(center.x + normal.x, center.y + normal.y),
                  2, cv::Scalar(255, 255, 0), 2);
-    }
-
-    for (auto it = scene.begin() + clusters.size(); it != scene.end(); ++it) {
-      cv::rectangle(_img, it->bounds2d, cv::Scalar(255, 0, 0), 2);
-      if (it->visible3d) {
-        // draw norm
-        float s = 10; // scale
-        cv::Point center(it->bounds2d.x + 0.5 * it->bounds2d.width,
-                         it->bounds2d.y + 0.5 * it->bounds2d.height);
-        // note: normal z value is likely negative
-        cv::Point normal(
-            s * static_cast<float>(it->normal3d.x()) / fabs(it->normal3d.z()),
-            s * static_cast<float>(it->normal3d.y()) / fabs(it->normal3d.z()));
-        cv::line(_img, center, cv::Point(center.x + normal.x, center.y + normal.y),
-                 cv::Scalar(255, 255, 0));
-        cv::circle(_img, cv::Point(center.x + normal.x, center.y + normal.y),
-                   2, cv::Scalar(255, 255, 0), 2);
-      }
     }
 
     // show results
