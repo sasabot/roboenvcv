@@ -18,6 +18,7 @@ namespace roboenvcv
       dist_thre = 1.2;
       rg_min_cluster_size = 100;
       ec_min_cluster_size = 50;
+      leap_threshold_in_sc = 0.2;
       second_clustering = true;
       remove_nan_in_sc = true;
     };
@@ -26,6 +27,7 @@ namespace roboenvcv
     float dist_thre;
     float rg_min_cluster_size;
     float ec_min_cluster_size;
+    float leap_threshold_in_sc;
     bool second_clustering;
     bool remove_nan_in_sc;
   };

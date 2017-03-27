@@ -5,7 +5,8 @@ void Get3DdataFrom2DBounds(roboenvcv::objectarea &obj,
                            int x, int y, int width, int height, int k,
                            cv::Mat &labeled_image,
                            pcl::PointCloud<pcl::PointXYZRGB>::Ptr _cloud,
-                           pcl::PointCloud<pcl::Normal>::Ptr normals) {
+                           pcl::PointCloud<pcl::Normal>::Ptr normals,
+                           float leap_threshold) {
   obj.indices3d.reserve(width * height);
   obj.visible3d = false;
 
@@ -28,7 +29,6 @@ void Get3DdataFrom2DBounds(roboenvcv::objectarea &obj,
               });
 
     // make sure we are getting depth of the same object
-    float leap_threshold = 0.2;
     Eigen::Vector3f center = {0.0, 0.0, 0.0};
     Eigen::Vector3f normal = {0.0, 0.0, 0.0};
     int center_count = 0;
@@ -300,7 +300,8 @@ std::pair<std::vector<roboenvcv::objectarea>,
         roboenvcv::objectarea obj;
         // get 3d data and color data
         Get3DdataFrom2DBounds(obj, x, y, width, height, k,
-                              labeled_image, _cloud, normals);
+                              labeled_image, _cloud, normals,
+                              _settings.leap_threshold_in_sc);
         obj.bounds2d =
           cv::Rect(x*w_scale, y*h_scale, width*w_scale, height*h_scale);
         scene.push_back(obj);
@@ -343,7 +344,8 @@ std::pair<std::vector<roboenvcv::objectarea>,
         roboenvcv::objectarea obj;
         // get 3d data and color data
         Get3DdataFrom2DBounds(obj, x_k, y_k, width_k, height_k, k,
-                              labeled_image, _cloud, normals);
+                              labeled_image, _cloud, normals,
+                              _settings.leap_threshold_in_sc);
         obj.bounds2d =
           cv::Rect(x_k*w_scale, y_k*h_scale, width_k*w_scale, height_k*h_scale);
         scene.push_back(obj);
@@ -406,7 +408,8 @@ std::pair<std::vector<roboenvcv::objectarea>,
         roboenvcv::objectarea obj;
         // get current cluster and 3d data + color data
         Get3DdataFrom2DBounds(obj, x, y, width, height, k,
-                              labeled_image, _cloud, normals);
+                              labeled_image, _cloud, normals,
+                              _settings.leap_threshold_in_sc);
         obj.bounds2d =
           cv::Rect(x*w_scale, y*h_scale, width*w_scale, height*h_scale);
         scene.push_back(obj);
