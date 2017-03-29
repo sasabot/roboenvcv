@@ -74,9 +74,13 @@ namespace roboenvcv
   ///   e.g. 100% blue far away is better match than 50% blue nearby
   /// @param[in] _target_color Named color to find. cf. roboenvcv::colorMap9
   /// @param[in] _scene Lists of objects to find from.
+  /// @param[in] _thre Threshold for comparing distance instead of color.
+  ///   e.g. _thre=0.05 54% blue and 50% blue: comared with distance.
+  ///   e.g. _thre=0.05 55% blue and 50% blue: 55% blue is always better match.
   /// @return Indices (in vector _scene) of matched objects sorted by likeliness.
   std::vector<int> FindTarget
-  (std::string _target_color, std::vector<objectarea> &_scene);
+  (std::string _target_color, std::vector<objectarea> &_scene,
+   float _thre=0.05);
 
   /// @brief Patch object region with surrounding depth points.
   /// @param[in] _target Target object to patch.

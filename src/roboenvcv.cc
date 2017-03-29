@@ -536,7 +536,8 @@ std::pair<std::vector<roboenvcv::objectarea>,
 
 //////////////////////////////////////////////////
 std::vector<int> roboenvcv::FindTarget
-(std::string _target_color, std::vector<roboenvcv::objectarea> &_scene)
+(std::string _target_color, std::vector<roboenvcv::objectarea> &_scene,
+ float _thre)
 {
   if (_target_color == "any") {
     std::vector<int> result(_scene.size());
@@ -571,9 +572,9 @@ std::vector<int> roboenvcv::FindTarget
   float best_score = candidates.begin()->second;
   for (auto obj = candidates.begin(); obj != candidates.end(); ++obj) {
     auto s = _scene.begin() + obj->first;
-    if (fabs(obj->second - best_score) < 0.1) {
+    if (fabs(obj->second - best_score) < _thre) {
       oc->push_back({obj->first, s->center3d.norm()});
-    } else { // any score with more than 0.1 difference, add to next field
+    } else { // any score with more than _thre difference, add to next field
       best_score = obj->second;
       ordered_candidates.push_back({{obj->first, s->center3d.norm()}});
       oc = ordered_candidates.end() - 1;
