@@ -1,6 +1,15 @@
 #include "roboenvcv/roboenvcv_extra.hh"
 
 //////////////////////////////////////////////////
+void get_wstring(const std::string &src, std::wstring &dest) {
+  std::setlocale(LC_CTYPE, "en_US.utf8");
+  wchar_t *wcs = new wchar_t[src.length() + 1];
+  mbstowcs(wcs, src.c_str(), src.length() + 1);
+  dest = wcs;
+  delete [] wcs;
+};
+
+//////////////////////////////////////////////////
 void roboenvcv::PatchBoundsForOcr
 (roboenvcv::objectarea &_it, cv::Mat &_img, float _margin_top,
  float _margin_right, float _margin_bottom, float _margin_left)
@@ -94,18 +103,30 @@ std::vector<int> roboenvcv::FindTargetWithOcr
 
     if (!go_to_next) { // this means some words were at least found
       // rate score with number of unique letter matches
-      std::string word = res->at(0);
-      if (((0x80 & (_target_name.at(0))[0]) != 0 && res->at(1) != "")
-          || res->at(0) == "") // accept non null result
-        word = res->at(1);
-      std::string unique_word = word;
-      std::sort(unique_word.begin(), unique_word.end());
-      unique_word.erase(std::unique(unique_word.begin(), unique_word.end()),
-                        unique_word.end());
       int letter_matches = 0;
-      for (unsigned int c = 0; c < unique_word.length(); ++c)
-        if (_target_name.begin()->find(unique_word.at(c)) != std::string::npos)
-          ++letter_matches;
+      if (((0x80 & (_target_name.at(0))[0]) != 0 && res->at(1) != "")
+          || res->at(0) == "") { // accept non null result
+        std::wstring word;
+        std::wstring target;
+        get_wstring(res->at(1), word); // convert to wstring
+        get_wstring(_target_name.at(0), target); // convert to wstring
+        std::wstring unique_word = word;
+        std::sort(unique_word.begin(), unique_word.end());
+        unique_word.erase(std::unique(unique_word.begin(), unique_word.end()),
+                          unique_word.end());
+        for (unsigned int c = 0; c < unique_word.length(); ++c)
+          if (target.find(unique_word.at(c)) != std::string::npos)
+            ++letter_matches;
+      } else {
+        std::string word = res->at(0);
+        std::string unique_word = word;
+        std::sort(unique_word.begin(), unique_word.end());
+        unique_word.erase(std::unique(unique_word.begin(), unique_word.end()),
+                          unique_word.end());
+        for (unsigned int c = 0; c < unique_word.length(); ++c)
+          if (_target_name.begin()->find(unique_word.at(c)) != std::string::npos)
+            ++letter_matches;
+      }
       obj->properties.likeliness = 0.1 * letter_matches;
       candidates.push_back(std::tuple<int, float, float>
                            (i, obj->properties.likeliness, obj->center3d.norm()));
