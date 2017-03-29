@@ -6,6 +6,7 @@
 #include <vector>
 #include <sys/stat.h>
 #include <chrono>
+#include <fstream>
 
 #include "roboenvcv/types.h"
 
@@ -61,7 +62,8 @@ namespace roboenvcv
 
   /// @brief Print object name properties (e.g. OCR result).
   /// @param[in] _objects List of objects to print name properties.
-  void printNameProperties(std::vector<objectarea> &_objects)
+  /// @param[in] _dbgfolder Folder to save results.
+  void printNameProperties(std::vector<objectarea> &_objects, std::string _dbgfolder="")
   {
     printf("printing properties\n-------\n");
     for (auto obj = _objects.begin(); obj != _objects.end(); ++obj) {
@@ -71,7 +73,20 @@ namespace roboenvcv
       printf("-------\n");
     }
     printf("finshed printing properties\n");
+
+    if (_dbgfolder == "")
+      return;
+
+    // write to file if specified
+    std::ofstream ofs(_dbgfolder + "properties_results.txt");
+    for (auto obj = _objects.begin(); obj != _objects.end(); ++obj) {
+      for (auto txt = obj->properties.name.begin();
+           txt != obj->properties.name.end(); ++txt)
+        ofs << txt->c_str() << "(" << obj->properties.likeliness << ")" << std::endl;
+      ofs << "-------" << std::endl;
+    }
   }
+
 }
 
 #endif
