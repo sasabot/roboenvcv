@@ -26,8 +26,8 @@
 
 
   <include file="$(find darknet_ros)/launch/darknet_ros.launch">
-      <arg name="camera_topic_name" value="$(low_rgb)"/>
-      <remap from="/darknet_ros/YOLO_BoundingBoxes" to="$(darknet_out)">
+      <arg name="camera_topic_name" value="$(arg low_rgb)"/>
+      <remap from="/darknet_ros/YOLO_BoundingBoxes" to="$(darknet_out)"/>
   </include>
 
   <node name="darknet_faceinfo_extractor" pkg="roboenvcv"
