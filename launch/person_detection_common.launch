@@ -1,0 +1,14 @@
+<launch>
+  <arg name="gpu" default="false"/>
+  <arg name="num_faces" default="3"/>
+
+  <node name="facepose_detector" pkg="roboenvcv"
+        type="facepose_detector.py" output="screen">
+      <param name="gpu" value="$(arg gpu)"/>
+  </node>
+
+  <node name="id_mapper" pkg="roboenvcv"
+        type="id_mapper" output="screen">
+      <param name="tracknfaces" value="$(arg num_faces)"/>
+  </node>
+</launch>

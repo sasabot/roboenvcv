@@ -1,0 +1,2 @@
+sensor_msgs/RegionOfInterest roi
+geometry_msgs/Point center3d
