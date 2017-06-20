@@ -22,7 +22,7 @@ void calcGlobalHeadInfo(const roboenvcv::Person::ConstPtr& _msg) {
 
   roboenvcv::PersonCoordinate msg;
 
-  auto position3d_map =
+  Eigen::Vector3f position3d_map =
     rot_global_ * Eigen::Vector3f(_msg->position3d.x,
                                   _msg->position3d.y,
                                   _msg->position3d.z) + pos_global_;
