@@ -1,3 +1,5 @@
+// note: this code is not stable. noise sensitive, sudden freeze.
+
 #include <ros/ros.h>
 #include <ros/callback_queue.h>
 #include <ros/subscribe_options.h>
@@ -24,6 +26,7 @@ std::mutex depth_mutex_;
 int x_scale_;
 int y_scale_;
 bool y_up_;
+std::string frame_id_;
 ros::Publisher face_roi_info_publisher_;
 
 // parameters
@@ -47,8 +50,10 @@ void BoundingsCallback
   depth_mutex_.unlock();
   pcl::fromPCLPointCloud2(pcl, *cloud);
 
-  if (cloud->points.size() == 0) // bad point cloud
+  if (cloud->points.size() == 0) { // bad point cloud
+    ROS_ERROR("bad point cloud!!!!!!");
     return;
+  }
 
   roboenvcv::RegionOfInterestInfos msg;
 
@@ -56,7 +61,7 @@ void BoundingsCallback
   for (auto obj = _msg->boundingBoxes.begin();
        obj != _msg->boundingBoxes.end(); ++obj) {
     // look for person only
-    if (obj->Class != "person")
+    if (obj->Class != "person" + frame_id_)
       continue;
 
     int xmin = obj->xmin;
@@ -193,6 +198,12 @@ int main(int argc, char **argv) {
   y_up_ = false;
   nh.getParam("y_up", y_up_);
 
+  bool multigpu = false;
+  nh.getParam("multiple_gpu", multigpu);
+  frame_id_ = "";
+  if (!multigpu) // identify sensor w/ frame_id_ instead of topic
+    nh.getParam("camera_link", frame_id_);
+
   face_roi_info_publisher_ =
     nh.advertise<roboenvcv::RegionOfInterestInfos>
     ("/roboenvcv/cropped/boundings", 1);
@@ -201,7 +212,7 @@ int main(int argc, char **argv) {
   ros::SubscribeOptions image_ops =
     ros::SubscribeOptions::create<sensor_msgs::PointCloud2>(
         "/camera/low_resolution_rgbd_points",
-        10,
+        1,
         boost::bind(&DepthCallback, _1),
         ros::VoidPtr(),
         &image_queue);
@@ -213,7 +224,7 @@ int main(int argc, char **argv) {
   ros::SubscribeOptions bb_ops =
     ros::SubscribeOptions::create<darknet_ros_msgs::BoundingBoxes>(
         "/darknet_ros/YOLO_BoundingBoxes",
-        10,
+        1,
         boost::bind(&BoundingsCallback, _1),
         ros::VoidPtr(),
         &bb_queue);
