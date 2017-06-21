@@ -1,6 +1,18 @@
 <launch>
+  <arg name="use_darknet" default="false"/>
+  <arg name="multiple_gpu" default="false"/>
   <arg name="gpu" default="false"/>
   <arg name="num_faces" default="3"/>
+
+  <!-- sensor topic settings -->
+  <arg name="low_rgb" default="/kinect/rgb"/>
+
+  <group if="$(arg use_darknet)">
+    <include file="$(find darknet_ros)/launch/darknet_ros.launch"
+             unless="$(arg multiple_gpu)">
+        <arg name="camera_topic_name" value="$(arg low_rgb)"/>
+    </include>
+  </group>
 
   <node name="facepose_detector" pkg="roboenvcv"
         type="facepose_detector.py" output="screen">

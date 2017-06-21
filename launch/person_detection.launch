@@ -1,5 +1,7 @@
 <launch>
   <arg name="sensor_id" default="0"/>
+  <arg name="use_darknet" default="false"/>
+  <arg name="multiple_gpu" default="false"/>
 
   <!-- sensor topic settings -->
   <arg name="low_rgb" default="/kinect/rgb"/>
@@ -23,22 +25,56 @@
   <arg name="z" default="1.0"/>
   <arg name="r" default="0.0"/>
 
+  <!-- haardetector node settings (if not using darknet) -->
+  <arg name="haarcascade" default="haarcascade_mcs_upperbody.xml"/>
+  <arg name="depth_threshold" default="2.0"/>
 
 
-  <include file="$(find darknet_ros)/launch/darknet_ros.launch">
-      <arg name="camera_topic_name" value="$(arg low_rgb)"/>
-      <remap from="/darknet_ros/YOLO_BoundingBoxes" to="$(darknet_out)"/>
-  </include>
 
-  <node name="darknet_faceinfo_extractor" pkg="roboenvcv"
-        type="darknet_faceinfo_extractor" output="screen">
+  <!-- if has enough gpu memory and running darknet -->
+
+  <group if="$(arg use_darknet)">
+    <group if="$(arg multiple_gpu)">
+      <include file="$(find darknet_ros)/launch/darknet_ros.launch">
+          <arg name="camera_topic_name" value="$(arg low_rgb)"/>
+          <remap from="/darknet_ros/YOLO_BoundingBoxes" to="$(arg darknet_out)"/>
+      </include>
+    </group>
+
+    <node name="darknet_faceinfo_extractor" pkg="roboenvcv"
+          type="darknet_faceinfo_extractor" output="screen">
+        <param name="image/x_scale" value="$(arg x_scale)"/>
+        <param name="image/y_scale" value="$(arg y_scale)"/>
+        <param name="y_up" value="$(arg y_up)"/>
+        <remap from="/camera/low_resolution_rgbd_points" to="$(arg low_rgbd)"/>
+        <remap from="/roboenvcv/cropped/boundings" to="$(arg roi_out)"/>
+
+        <param name="multiple_gpu" value="$(arg multiple_gpu)"/>
+        <!-- for single gpu -->
+        <param name="camera_link" value="$(arg camera_link)"/>
+        <!-- for multiple gpu -->
+        <remap from="/darknet_ros/YOLO_BoundingBoxes" to="$(arg darknet_out)"/>
+    </node>
+  </group>
+
+
+  <!-- else -->
+
+  <node name="haar_faceinfo_extractor" pkg="roboenvcv"
+        type="haar_faceinfo_extractor" output="screen"
+        unless="$(arg use_darknet)">
+      <param name="haarcascade" value="$(arg haarcascade)"/>
+      <param name="depth_threshold" value="$(arg depth_threshold)"/>
       <param name="image/x_scale" value="$(arg x_scale)"/>
       <param name="image/y_scale" value="$(arg y_scale)"/>
       <param name="y_up" value="$(arg y_up)"/>
       <remap from="/camera/low_resolution_rgbd_points" to="$(arg low_rgbd)"/>
-      <remap from="/darknet_ros/YOLO_BoundingBoxes" to="$(arg darknet_out)"/>
       <remap from="/roboenvcv/cropped/boundings" to="$(arg roi_out)"/>
   </node>
+
+
+
+  <!-- common from here -->
 
   <node name="crop_image" pkg="roboenvcv"
         type="crop_image" output="screen">
