@@ -49,8 +49,15 @@ endif()
 
 find_package(OpenCV 3)
 if(NOT OpenCV_FOUND)
-  message(WARNING "opencv not found, disabled")
+  message(WARNING "opencv 3 not found, disabled")
+  find_package(OpenCV)
+  if(NOT OpenCV_FOUND)
+    message(WARNING "opencv not found, disabled")
+  else()
+    include_directories(${OpenCV_INCLUDE_DIRS})
+  endif()
 else()
+  set(OpenCV_3_FOUND)
   include_directories(${OpenCV_INCLUDE_DIRS})
   message(STATUS "OpenCV library status:")
   message(STATUS "    version: ${OpenCV_VERSION}")
@@ -67,7 +74,7 @@ if(linux_kinect_FOUND)
   link_directories(${linux_kinect_LIBRARIES})
 endif()
 
-if (linux_kinect_FOUND AND OpenCV_FOUND AND PCL_1.8_FOUND)
+if (linux_kinect_FOUND AND OpenCV_3_FOUND AND PCL_1.8_FOUND)
 catkin_package(
  INCLUDE_DIRS include
  LIBRARIES roboenvcv roboenvcv_extra
@@ -77,7 +84,7 @@ catkin_package(
 
 ################## :optional ##################
 
-elseif (OpenCV_FOUND AND PCL_1.8_FOUND)
+elseif (OpenCV_3_FOUND AND PCL_1.8_FOUND)
 catkin_package(
  INCLUDE_DIRS include
  LIBRARIES roboenvcv
@@ -101,14 +108,14 @@ include_directories(
 add_definitions(-std=c++11)
 
 ################## optional: ##################
-if (linux_kinect_FOUND AND OpenCV_FOUND AND PCL_1.8_FOUND)
+if (linux_kinect_FOUND AND OpenCV_3_FOUND AND PCL_1.8_FOUND)
   add_library(roboenvcv_extra
     src/roboenvcv_extra.cc
   )
 endif()
 ################## :optional ##################
 
-if (OpenCV_FOUND AND PCL_1.8_FOUND)
+if (OpenCV_3_FOUND AND PCL_1.8_FOUND)
   add_library(roboenvcv
     src/roboenvcv.cc
   )
@@ -122,6 +129,13 @@ if (darknet_ros_msgs_FOUND AND PCL_FOUND)
     nodes/darknet_faceinfo_extractor.cc)
   target_link_libraries(darknet_faceinfo_extractor
     ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+endif()
+
+if (OpenCV_FOUND AND PCL_FOUND)
+  add_executable(haar_faceinfo_extractor
+    nodes/haar_faceinfo_extractor.cc)
+  target_link_libraries(haar_faceinfo_extractor
+    ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBRARIES})
 endif()
 
 add_executable(crop_image nodes/crop_image.cc)
