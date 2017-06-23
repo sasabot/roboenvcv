@@ -44,6 +44,14 @@ std::vector<FaceLog> face_log_;
 
 void PersonCoordinateCallback
 (const roboenvcv::PersonCoordinate::ConstPtr& _msg) {
+  // check if any old log exists
+  for (auto log = face_log_.begin(); log != face_log_.end(); ++log)
+    if (std::chrono::duration_cast<std::chrono::milliseconds>
+        (std::chrono::high_resolution_clock::now() - log->last_track_point)
+        .count() > 10000) { // person not found for 10 seconds
+      log->Free(next_reserved_face_id_++);
+    }
+
   auto position =
     Eigen::Vector3d(_msg->position3d_map.x,
                     _msg->position3d_map.y,
@@ -56,8 +64,13 @@ void PersonCoordinateCallback
     if (!face_log_.at(i).is_tracked)
       continue;
 
-    float dist = (face_log_.at(i).position - position).norm();
-    if (dist < 0.3 && dist < likeliness) {
+    ROS_INFO("id %d is being tracked", static_cast<int>(i));
+
+    Eigen::Vector3d diff = face_log_.at(i).position - position;
+    float dist = diff.norm();
+    float z_dist = fabs(diff.z());
+    // face within 50cm of previous frame
+    if (dist < 0.5 && dist < likeliness) {
       likely_enum = i;
       likeliness = dist;
     }
@@ -71,18 +84,12 @@ void PersonCoordinateCallback
         break;
       }
 
-  if (likely_enum < 0)
+  if (likely_enum < 0) {
+    ROS_WARN("exceeded trackable number in id_mapper!!!!!!");
     return; // trackable number of faces occupied
+  }
 
   face_log_.at(likely_enum).Update(position);
-
-  // check if any old log exists
-  for (auto log = face_log_.begin(); log != face_log_.end(); ++log)
-    if (std::chrono::duration_cast<std::chrono::milliseconds>
-        (std::chrono::high_resolution_clock::now() - log->last_track_point)
-        .count() > 10000) { // person not found for 10 seconds
-      log->Free(next_reserved_face_id_++);
-    }
 
   roboenvcv::PersonCoordinate msg;
   msg = *_msg;
