@@ -2,6 +2,7 @@
   <arg name="sensor_id" default="0"/>
   <arg name="use_darknet" default="false"/>
   <arg name="multiple_gpu" default="false"/>
+  <arg name="tf_dynamic" default="false"/>
 
   <!-- sensor topic settings -->
   <arg name="low_rgb" default="/kinect/rgb"/>
@@ -85,11 +86,13 @@
 
   <arg name="parent_transform" default="$(arg x) $(arg y) $(arg z) $(arg r) 0 1.57"/>
   <node name="kinect_transform" pkg="tf" type="static_transform_publisher"
-        args="$(arg parent_transform) /map $(arg camera_link) 1000"/>
+        args="$(arg parent_transform) /map $(arg camera_link) 1000"
+        unless="$(arg tf_dynamic)"/>
 
   <node name="static_sensor_tf" pkg="roboenvcv"
         type="static_sensor_tf" output="screen"
-        args="$(arg parent_transform)">
+        args="$(arg parent_transform)"
+        unless="$(arg tf_dynamic)">
       <remap from="/tf_msg/static_sensor" to="$(arg tf_msg)"/>
   </node>
 
