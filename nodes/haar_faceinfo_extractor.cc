@@ -35,6 +35,9 @@ cv::CascadeClassifier haar_detector_;
 std::mutex dbg_mutex_;
 cv::Mat dbg_img_;
 
+float head_height_ = 0.35;
+float D_ = 0.25;
+
 void DepthCallback(const sensor_msgs::PointCloud2::ConstPtr &_msg) {
   // auto t1 = std::chrono::high_resolution_clock::now();
 
@@ -87,11 +90,44 @@ void DepthCallback(const sensor_msgs::PointCloud2::ConstPtr &_msg) {
 
     auto p = cloud->begin() + (y + half_height) * cloud->width + x + half_width; 
 
+    // find y height
+    int width = (half_width << 1);
+    int height = (half_height << 1);
+    int xmax = x + width;
+    int ymax = y + height;
+    float threshold_z = p->z + D_;
+    float minimum_y = std::numeric_limits<float>::max();
+    float maximum_y = std::numeric_limits<float>::min();
+    for (size_t j = y; j < ymax; ++j) {
+      int row_points = 0;
+      float average_y = 0.0;
+      auto p_ij = cloud->points.begin() + x + j * cloud->width;
+      for (size_t i = x; i < xmax; ++i) {
+        if (!std::isinf(p_ij->y) && !std::isnan(p_ij->y) && (p_ij->z < threshold_z)) {
+          average_y += p_ij->y;
+          ++row_points;
+        }
+        ++p_ij;
+      }
+      average_y /= row_points;
+      if (row_points != 0){
+        if (average_y < minimum_y)
+          minimum_y = average_y;
+        else if (average_y > maximum_y)
+          maximum_y = average_y;
+      }
+    }
+
+    if ((maximum_y - minimum_y) > head_height_) {
+      cv::rectangle(img, *head, cv::Scalar(128));
+      continue; // likely noise and not head
+    }
+
     roboenvcv::RegionOfInterestInfo info;
     info.roi.x_offset = x * x_scale_;
     info.roi.y_offset = y * y_scale_;
-    info.roi.width = (half_width << 1) * x_scale_;
-    info.roi.height = (half_height << 1) * y_scale_;
+    info.roi.width = width * x_scale_;
+    info.roi.height = height * y_scale_;
     info.center3d.x = p->x;
     info.center3d.y = p->y;
     info.center3d.z = p->z;
