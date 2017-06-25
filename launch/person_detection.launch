@@ -96,6 +96,13 @@
       <remap from="/tf_msg/static_sensor" to="$(arg tf_msg)"/>
   </node>
 
+  <group if="$(arg tf_dynamic)">
+    <node name="dynamic_sensor_tf" pkg="roboenvcv" type="dynamic_sensor_tf">
+          <param name="dynamic_frame" value="$(arg camera_link)"/>
+          <remap from="/tf_msg/dynamic_sensor" to="$(arg tf_msg)"/>
+    </node>
+  </group>
+
   <node name="to_global" pkg="roboenvcv"
         type="to_global" output="screen">
       <param name="sensor_id" value="$(arg sensor_id)"/>

@@ -144,6 +144,9 @@ target_link_libraries(crop_image ${catkin_LIBRARIES})
 add_executable(static_sensor_tf nodes/static_sensor_tf.cc)
 target_link_libraries(static_sensor_tf ${catkin_LIBRARIES})
 
+add_executable(dynamic_sensor_tf nodes/dynamic_sensor_tf.cc)
+target_link_libraries(dynamic_sensor_tf ${catkin_LIBRARIES})
+
 add_executable(to_global nodes/to_global.cc)
 target_link_libraries(to_global ${catkin_LIBRARIES})
 
