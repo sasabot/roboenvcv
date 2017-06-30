@@ -13,7 +13,7 @@ import hyperfacemodel
 
 import threading
 
-header_size = 18
+header_size = 20
 
 def solve(field, img):
     size = img.shape[0:2]
@@ -25,7 +25,7 @@ def solve(field, img):
     y = models(x)
 
     msg = Person()
-    msg.sensor_id = struct.unpack('i', bytearray(field[12:14]) + '\x00\x00')[0]
+    msg.sensor_id = struct.unpack('i', bytearray(field[12:16]))[0]
     msg.position3d = Point(struct.unpack('f', bytearray(field[0:4]))[0],
                            struct.unpack('f', bytearray(field[4:8]))[0],
                            struct.unpack('f', bytearray(field[8:12]))[0])

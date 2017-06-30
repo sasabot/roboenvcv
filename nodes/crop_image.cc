@@ -46,7 +46,7 @@ void BoundingsCallback
   for (auto info = _msg->infos.begin(); info != _msg->infos.end(); ++info) {
     int width = info->roi.width;
     int height = info->roi.height;
-    msg.data.resize(msg.data.size() + width * height * 3 + 18);
+    msg.data.resize(msg.data.size() + width * height * 3 + 20);
 
     // 2 bytes width
     uint8_t *width_bytes;
@@ -82,11 +82,13 @@ void BoundingsCallback
     msg.data[at++] = z_bytes[1];
     msg.data[at++] = z_bytes[2];
     msg.data[at++] = z_bytes[3];
-    // 2 bytes sensor_id
+    // 4 bytes sensor_id
     uint8_t *id_bytes;
     id_bytes = reinterpret_cast<uint8_t*>(&sensor_id_);
     msg.data[at++] = id_bytes[0];
     msg.data[at++] = id_bytes[1];
+    msg.data[at++] = id_bytes[2];
+    msg.data[at++] = id_bytes[3];
 
     // rest, copy image
     int x_offset = info->roi.x_offset;
