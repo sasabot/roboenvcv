@@ -1,0 +1,5 @@
+string id
+geometry_msgs/Point position3d_camera
+geometry_msgs/Point position3d_map
+geometry_msgs/Quaternion pose3d_camera
+geometry_msgs/Pose map_to_camera

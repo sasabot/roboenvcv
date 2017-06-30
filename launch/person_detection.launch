@@ -1,0 +1,112 @@
+<launch>
+  <arg name="sensor_id" default="0"/>
+  <arg name="use_darknet" default="false"/>
+  <arg name="multiple_gpu" default="false"/>
+  <arg name="tf_dynamic" default="false"/>
+
+  <!-- sensor topic settings -->
+  <arg name="low_rgb" default="/kinect/rgb"/>
+  <arg name="low_rgbd" default="/kinect/stream"/>
+  <arg name="high_rgb" default="/kinect/rgb/hd"/>
+  <arg name="tf_msg" default="/tf_msg/kinect"/>
+
+  <!-- internal i/o topic settings -->
+  <arg name="darknet_out" default="/darknet_ros/YOLO_BoundingBoxes"/>
+  <arg name="roi_out" default="/roboenvcv/cropped/boundings"/>
+
+  <!-- low/high resolution scale -->
+  <arg name="x_scale" default="3"/>
+  <arg name="y_scale" default="3"/>
+
+  <!-- camera settings -->
+  <arg name="camera_link" default="kinect_link"/>
+  <arg name="y_up" default="true"/>
+  <arg name="x" default="0.0"/>
+  <arg name="y" default="0.0"/>
+  <arg name="z" default="1.0"/>
+  <arg name="r" default="0.0"/>
+
+  <!-- haardetector node settings (if not using darknet) -->
+  <arg name="haarcascade" default="haarcascade_mcs_upperbody.xml"/>
+  <arg name="depth_threshold" default="2.0"/>
+
+
+
+  <!-- if has enough gpu memory and running darknet -->
+
+  <group if="$(arg use_darknet)">
+    <group if="$(arg multiple_gpu)">
+      <include file="$(find darknet_ros)/launch/darknet_ros.launch">
+          <arg name="camera_topic_name" value="$(arg low_rgb)"/>
+          <remap from="/darknet_ros/YOLO_BoundingBoxes" to="$(arg darknet_out)"/>
+      </include>
+    </group>
+
+    <node name="darknet_faceinfo_extractor" pkg="roboenvcv"
+          type="darknet_faceinfo_extractor" output="screen">
+        <param name="image/x_scale" value="$(arg x_scale)"/>
+        <param name="image/y_scale" value="$(arg y_scale)"/>
+        <param name="y_up" value="$(arg y_up)"/>
+        <remap from="/camera/low_resolution_rgbd_points" to="$(arg low_rgbd)"/>
+        <remap from="/roboenvcv/cropped/boundings" to="$(arg roi_out)"/>
+
+        <param name="multiple_gpu" value="$(arg multiple_gpu)"/>
+        <!-- for single gpu -->
+        <param name="camera_link" value="$(arg camera_link)"/>
+        <!-- for multiple gpu -->
+        <remap from="/darknet_ros/YOLO_BoundingBoxes" to="$(arg darknet_out)"/>
+    </node>
+  </group>
+
+
+  <!-- else -->
+
+  <node name="haar_faceinfo_extractor" pkg="roboenvcv"
+        type="haar_faceinfo_extractor" output="screen"
+        unless="$(arg use_darknet)">
+      <param name="haarcascade" value="$(arg haarcascade)"/>
+      <param name="depth_threshold" value="$(arg depth_threshold)"/>
+      <param name="image/x_scale" value="$(arg x_scale)"/>
+      <param name="image/y_scale" value="$(arg y_scale)"/>
+      <param name="y_up" value="$(arg y_up)"/>
+      <remap from="/camera/low_resolution_rgbd_points" to="$(arg low_rgbd)"/>
+      <remap from="/roboenvcv/cropped/boundings" to="$(arg roi_out)"/>
+  </node>
+
+
+
+  <!-- common from here -->
+
+  <node name="crop_image" pkg="roboenvcv"
+        type="crop_image" output="screen">
+      <param name="sensor_id" value="$(arg sensor_id)"/>
+      <remap from="/camera/high_resolution_image" to="$(arg high_rgb)"/>
+      <remap from="/roboenvcv/cropped/boundings" to="$(arg roi_out)"/>
+  </node>
+
+  <arg name="parent_transform" default="$(arg x) $(arg y) $(arg z) $(arg r) 0 1.57"/>
+  <node name="kinect_transform" pkg="tf" type="static_transform_publisher"
+        args="$(arg parent_transform) /map $(arg camera_link) 1000"
+        unless="$(arg tf_dynamic)"/>
+
+  <node name="static_sensor_tf" pkg="roboenvcv"
+        type="static_sensor_tf" output="screen"
+        args="$(arg parent_transform)"
+        unless="$(arg tf_dynamic)">
+      <remap from="/tf_msg/static_sensor" to="$(arg tf_msg)"/>
+  </node>
+
+  <group if="$(arg tf_dynamic)">
+    <node name="dynamic_sensor_tf" pkg="roboenvcv" type="dynamic_sensor_tf">
+          <param name="dynamic_frame" value="$(arg camera_link)"/>
+          <remap from="/tf_msg/dynamic_sensor" to="$(arg tf_msg)"/>
+    </node>
+  </group>
+
+  <node name="to_global" pkg="roboenvcv"
+        type="to_global" output="screen">
+      <param name="sensor_id" value="$(arg sensor_id)"/>
+      <param name="y_up" value="$(arg y_up)"/>
+      <remap from="/tf_msg/sensor" to="$(arg tf_msg)"/>
+  </node>
+</launch>
