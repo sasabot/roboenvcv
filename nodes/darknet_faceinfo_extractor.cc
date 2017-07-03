@@ -141,7 +141,7 @@ void BoundingsCallback
     for (size_t i = xmin; i < xmax; ++i) {
       int column_points = 0;
       float average_x = 0.0;
-      auto p = cloud->points.begin() + i + bb_out_top_y;
+      auto p = cloud->points.begin() + i + bb_out_top_y * cloud->width;
       for (size_t j = 0; j < bb_out_height; ++j) {
         if (!std::isinf(p->x) && !std::isnan(p->x)) {
           average_x += p->x;
