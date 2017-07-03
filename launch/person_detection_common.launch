@@ -1,5 +1,6 @@
 <launch>
   <arg name="use_darknet" default="false"/>
+  <arg name="light" default="false"/>
   <arg name="multiple_gpu" default="false"/>
   <arg name="gpu" default="false"/>
   <arg name="num_faces" default="3"/>
@@ -15,7 +16,8 @@
   </group>
 
   <node name="facepose_detector" pkg="roboenvcv"
-        type="facepose_detector.py" output="screen">
+        type="facepose_detector.py" output="screen"
+        unless="$(arg light)">
       <param name="gpu" value="$(arg gpu)"/>
   </node>
 

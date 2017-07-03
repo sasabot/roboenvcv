@@ -138,6 +138,13 @@ if (OpenCV_FOUND AND PCL_FOUND)
     ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBRARIES})
 endif()
 
+if (darknet_ros_msgs_FOUND AND OpenCV_FOUND AND PCL_FOUND)
+  add_executable(darknethaar_faceinfo_extractor
+    nodes/darknethaar_faceinfo_extractor.cc)
+  target_link_libraries(darknethaar_faceinfo_extractor
+    ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBRARIES})
+endif()
+
 add_executable(crop_image nodes/crop_image.cc)
 target_link_libraries(crop_image ${catkin_LIBRARIES})
 
