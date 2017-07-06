@@ -94,83 +94,81 @@ void BoundingsCallback
     int in_width = xmax - xmin;
     int in_height = ymax - ymin;
 
-    cv::Mat subimg = img(cv::Rect(xmin, ymin, in_width, in_height));
-
-    // get head orientation and 3d position
-    std::vector<cv::Rect> heads;
-    haar_detector_.detectMultiScale(subimg, heads);
-
     roboenvcv::Person msg;
     msg.sensor_id = sensor_id_;
     geometry_msgs::Point position;
 
-    if (heads.size() == 0) { // looking sideways
-      // find nearest z
-      int y_one_eight = ymin + in_height / 8;
-      position.z = std::numeric_limits<float>::max();
-      for (size_t j = ymin; j < y_one_eight; ++j) {
-        auto p = cloud->points.begin() + xmin + j * cloud->width;
-        for (size_t i = 0; i < in_width; ++i) {
-          if (!std::isinf(p->z) && !std::isnan(p->z) && p->z < position.z)
-            position.z = p->z;
-          ++p;
+    // find nearest z
+    int y_one_eight = ymin + (in_height >> 3);
+    position.z = std::numeric_limits<float>::max();
+    for (size_t j = ymin; j < y_one_eight; ++j) {
+      auto p = cloud->points.begin() + xmin + j * cloud->width;
+      for (size_t i = 0; i < in_width; ++i) {
+        if (!std::isinf(p->z) && !std::isnan(p->z) && p->z < position.z)
+          position.z = p->z;
+        ++p;
+      }
+    }
+    // ROS_INFO("----------z: %f", position.z);
+
+    // filter point cloud
+    float threshold_z = position.z + D_;
+    for (size_t j = ymin; j < ymax; ++j) {
+      auto p = cloud->points.begin() + xmin + j * cloud->width;
+      for (size_t i = 0; i < in_width; ++i) {
+        if (p->z > threshold_z) {
+          p->x = std::numeric_limits<float>::quiet_NaN();
+          p->y = std::numeric_limits<float>::quiet_NaN();
+          p->z = std::numeric_limits<float>::quiet_NaN();
+        }
+        ++p;
+      }
+    }
+
+
+    // find head y region
+    std::function<bool(float, float)> condition;
+    if (y_up_)
+      condition = [&](float _a, float _b) {return _a < (_b - head_height_);};
+    else
+      condition = [&](float _a, float _b) {return _a > (_b + head_height_);};
+    int bb_out_top_y = -1, bb_out_bottom_y;
+    float bb_out_top_y_value;
+    for (size_t j = ymin; j < ymax; ++j) {
+      int row_points = 0;
+      float average_y = 0.0;
+      auto p = cloud->points.begin() + xmin + j * cloud->width;
+      for (size_t i = xmin; i < xmax; ++i) {
+        if (!std::isinf(p->y) && !std::isnan(p->y)) {
+          average_y += p->y;
+          ++row_points;
+        }
+        ++p;
+      }
+      average_y /= row_points;
+      if (row_points != 0){
+        if (bb_out_top_y < 0) {
+          bb_out_top_y = j;
+          bb_out_top_y_value = average_y;
+        } else if (condition(average_y, bb_out_top_y_value)) {
+          bb_out_bottom_y = j;
+          position.y = (bb_out_top_y_value + average_y) * 0.5;
+          break;
         }
       }
-      // ROS_INFO("----------z: %f", position.z);
+    }
+    if (bb_out_top_y < 0 || bb_out_bottom_y == 0) {
+      ROS_ERROR("could not detect head y region!");
+      continue;
+    }
+    int bb_out_height = bb_out_bottom_y - bb_out_top_y;
 
-      // filter point cloud
-      float threshold_z = position.z + D_;
-      for (size_t j = ymin; j < ymax; ++j) {
-        auto p = cloud->points.begin() + xmin + j * cloud->width;
-        for (size_t i = 0; i < in_width; ++i) {
-          if (p->z > threshold_z) {
-            p->x = std::numeric_limits<float>::quiet_NaN();
-            p->y = std::numeric_limits<float>::quiet_NaN();
-            p->z = std::numeric_limits<float>::quiet_NaN();
-          }
-          ++p;
-        }
-      }
+    cv::Mat subimg = img(cv::Rect(xmin, ymin, in_width, bb_out_bottom_y - ymin));
 
+    std::vector<cv::Rect> heads;
+    haar_detector_.detectMultiScale(subimg, heads);
 
-      // find head y region
-      std::function<bool(float, float)> condition;
-      if (y_up_)
-        condition = [&](float _a, float _b) {return _a < (_b - head_height_);};
-      else
-        condition = [&](float _a, float _b) {return _a > (_b + head_height_);};
-      int bb_out_top_y = -1, bb_out_bottom_y;
-      float bb_out_top_y_value;
-      for (size_t j = ymin; j < ymax; ++j) {
-        int row_points = 0;
-        float average_y = 0.0;
-        auto p = cloud->points.begin() + xmin + j * cloud->width;
-        for (size_t i = xmin; i < xmax; ++i) {
-          if (!std::isinf(p->y) && !std::isnan(p->y)) {
-            average_y += p->y;
-            ++row_points;
-          }
-          ++p;
-        }
-        average_y /= row_points;
-        if (row_points != 0){
-          if (bb_out_top_y < 0) {
-            bb_out_top_y = j;
-            bb_out_top_y_value = average_y;
-          } else if (condition(average_y, bb_out_top_y_value)) {
-            bb_out_bottom_y = j;
-            position.y = (bb_out_top_y_value + average_y) * 0.5;
-            break;
-          }
-        }
-      }
-      if (bb_out_top_y < 0 || bb_out_bottom_y == 0) {
-        ROS_ERROR("could not detect head y region!");
-        continue;
-      }
-      int bb_out_height = bb_out_bottom_y - bb_out_top_y;
-
-
+    if (heads.size() == 0) {
       // find head x region
       std::vector<std::pair<int, float> > average_x_value_in_column;
       for (size_t i = xmin; i < xmax; ++i) {
@@ -205,10 +203,6 @@ void BoundingsCallback
     }
 
     // else, frontal face was detected
-
-
-    if (heads.size() > 1) // has noise, sort by y value
-      std::sort(heads.begin(), heads.end(), [&](cv::Rect a, cv::Rect b){return (a.y > b.y);});
 
     auto subhead = heads.begin();
     cv::Rect head(xmin + subhead->x, ymin + subhead->y, subhead->width, subhead->height);
@@ -294,7 +288,7 @@ int main(int argc, char **argv) {
 
   // below for debug
   dbg_mutex_.lock();
-  dbg_img_ = cv::Mat(480, 640, CV_8U).clone();
+  dbg_img_ = cv::Mat(1, 1, CV_8U).clone();
   dbg_mutex_.unlock();
   while (ros::ok()) {
     dbg_mutex_.lock();
