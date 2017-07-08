@@ -43,7 +43,8 @@
     </group>
 
     <node name="darknet_faceinfo_extractor" pkg="roboenvcv"
-          type="darknet_faceinfo_extractor" output="screen">
+          type="darknet_faceinfo_extractor" output="screen"
+          respawn="true">
         <param name="image/x_scale" value="$(arg x_scale)"/>
         <param name="image/y_scale" value="$(arg y_scale)"/>
         <param name="y_up" value="$(arg y_up)"/>
