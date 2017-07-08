@@ -72,7 +72,7 @@ void BoundingsCallback
     int bb_in_height = ymax - ymin;
 
     // find nearest z
-    int y_one_eight = ymin + bb_in_height / 8;
+    int y_one_eight = ymin + (bb_in_height >> 3);
     float nearest_z = std::numeric_limits<float>::max();
     for (size_t j = ymin; j < y_one_eight; ++j) {
       auto p = cloud->points.begin() + xmin + j * cloud->width;
@@ -83,6 +83,10 @@ void BoundingsCallback
       }
     }
     // ROS_INFO("----------z: %f", nearest_z);
+
+    // person is far away and cannot detect face pose, reject
+    if (nearest_z > 2.0)
+      return;
 
     // filter point cloud
     float threshold_z = nearest_z + D_;
@@ -130,8 +134,8 @@ void BoundingsCallback
         }
       }
     }
-    if (bb_out_top_y < 0 || bb_out_bottom_y == 0) {
-      ROS_ERROR("could not detect head y region!");
+    if (bb_out_top_y < 0 || bb_out_bottom_y == 0 || bb_out_bottom_y < bb_out_top_y) {
+      ROS_ERROR("could not detect head y region! %d %d", bb_out_bottom_y, bb_out_top_y);
       return;
     }
     int bb_out_height = bb_out_bottom_y - bb_out_top_y;
