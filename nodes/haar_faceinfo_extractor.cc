@@ -118,7 +118,8 @@ void DepthCallback(const sensor_msgs::PointCloud2::ConstPtr &_msg) {
       }
     }
 
-    if ((maximum_y - minimum_y) > head_height_) {
+    float y_diff = maximum_y - minimum_y;
+    if (y_diff > head_height_ || y_diff < 0.1) {
       cv::rectangle(img, *head, cv::Scalar(128));
       continue; // likely noise and not head
     }

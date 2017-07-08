@@ -67,8 +67,9 @@ void PersonCoordinateCallback
     ROS_INFO("id %d is being tracked", static_cast<int>(i));
 
     Eigen::Vector3d diff = face_log_.at(i).position - position;
-    float dist = diff.norm();
     float z_dist = fabs(diff.z());
+    diff[2] = 0.0; // exclude height: people sometimes bend toward
+    float dist = diff.norm();
     // face within 50cm of previous frame
     if (dist < 0.5 && dist < likeliness) {
       likely_enum = i;
