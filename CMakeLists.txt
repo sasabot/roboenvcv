@@ -20,6 +20,7 @@ add_message_files(
   PersonCoordinate.msg
   RegionOfInterestInfo.msg
   RegionOfInterestInfos.msg
+  UInt8ArrayStamped.msg
 )
 
 generate_messages(
@@ -79,7 +80,7 @@ catkin_package(
  INCLUDE_DIRS include
  LIBRARIES roboenvcv roboenvcv_extra
  CATKIN_DEPENDS
- geometry_msgs roscpp roslib sensor_msgs std_msgs tf
+ geometry_msgs roscpp roslib sensor_msgs std_msgs tf message_generation
 )
 
 ################## :optional ##################
@@ -89,13 +90,13 @@ catkin_package(
  INCLUDE_DIRS include
  LIBRARIES roboenvcv
  CATKIN_DEPENDS
- geometry_msgs roscpp roslib sensor_msgs std_msgs tf
+ geometry_msgs roscpp roslib sensor_msgs std_msgs tf message_generation
 )
 else ()
 catkin_package(
  INCLUDE_DIRS include
  CATKIN_DEPENDS
- geometry_msgs roscpp roslib sensor_msgs std_msgs tf
+ geometry_msgs roscpp roslib sensor_msgs std_msgs tf message_generation
 )
 endif()
 
@@ -112,6 +113,7 @@ if (linux_kinect_FOUND AND OpenCV_3_FOUND AND PCL_1.8_FOUND)
   add_library(roboenvcv_extra
     src/roboenvcv_extra.cc
   )
+  add_dependencies(roboenvcv_extra roboenvcv_generate_messages_cpp)
 endif()
 ################## :optional ##################
 
@@ -119,6 +121,7 @@ if (OpenCV_3_FOUND AND PCL_1.8_FOUND)
   add_library(roboenvcv
     src/roboenvcv.cc
   )
+  add_dependencies(roboenvcv roboenvcv_generate_messages_cpp)
 endif()
 
 ################## nodes: ##################
@@ -129,6 +132,7 @@ if (darknet_ros_msgs_FOUND AND PCL_FOUND)
     nodes/darknet_faceinfo_extractor.cc)
   target_link_libraries(darknet_faceinfo_extractor
     ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+  add_dependencies(darknet_faceinfo_extractor roboenvcv_generate_messages_cpp)
 endif()
 
 if (OpenCV_FOUND AND PCL_FOUND)
@@ -136,6 +140,7 @@ if (OpenCV_FOUND AND PCL_FOUND)
     nodes/haar_faceinfo_extractor.cc)
   target_link_libraries(haar_faceinfo_extractor
     ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBRARIES})
+  add_dependencies(haar_faceinfo_extractor roboenvcv_generate_messages_cpp)
 endif()
 
 if (darknet_ros_msgs_FOUND AND OpenCV_FOUND AND PCL_FOUND)
@@ -143,10 +148,12 @@ if (darknet_ros_msgs_FOUND AND OpenCV_FOUND AND PCL_FOUND)
     nodes/darknethaar_faceinfo_extractor.cc)
   target_link_libraries(darknethaar_faceinfo_extractor
     ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBRARIES})
+  add_dependencies(darknethaar_faceinfo_extractor roboenvcv_generate_messages_cpp)
 endif()
 
 add_executable(crop_image nodes/crop_image.cc)
 target_link_libraries(crop_image ${catkin_LIBRARIES})
+add_dependencies(crop_image roboenvcv_generate_messages_cpp)
 
 add_executable(static_sensor_tf nodes/static_sensor_tf.cc)
 target_link_libraries(static_sensor_tf ${catkin_LIBRARIES})
@@ -156,7 +163,32 @@ target_link_libraries(dynamic_sensor_tf ${catkin_LIBRARIES})
 
 add_executable(to_global nodes/to_global.cc)
 target_link_libraries(to_global ${catkin_LIBRARIES})
+add_dependencies(to_global roboenvcv_generate_messages_cpp)
 
 add_executable(id_mapper nodes/id_mapper.cc)
 target_link_libraries(id_mapper ${catkin_LIBRARIES})
+add_dependencies(id_mapper roboenvcv_generate_messages_cpp)
 ################## nodes: ##################
+
+################## nodes2: ##################
+find_package(jsk_recognition_msgs)
+
+if (jsk_recognition_msgs_FOUND AND PCL_FOUND AND OpenCV_FOUND)
+  add_executable(openpose_faceinfo_extractor
+    nodes2/openpose_faceinfo_extractor.cc)
+  target_link_libraries(openpose_faceinfo_extractor
+    ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBRARIES})
+  add_dependencies(openpose_faceinfo_extractor roboenvcv_generate_messages_cpp)
+endif()
+
+add_executable(crop_image_timestamped nodes2/crop_image_timestamped.cc)
+target_link_libraries(crop_image_timestamped ${catkin_LIBRARIES})
+add_dependencies(crop_image_timestamped roboenvcv_generate_messages_cpp)
+
+add_executable(dynamic_sensor_tfstamped nodes2/dynamic_sensor_tfstamped.cc)
+target_link_libraries(dynamic_sensor_tfstamped ${catkin_LIBRARIES})
+
+add_executable(to_global_dynamic nodes2/to_global_dynamic.cc)
+target_link_libraries(to_global_dynamic ${catkin_LIBRARIES})
+add_dependencies(to_global_dynamic roboenvcv_generate_messages_cpp)
+################## :nodes2 ##################
