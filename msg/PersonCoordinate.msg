@@ -1,3 +1,4 @@
+std_msgs/Header header
 string id
 geometry_msgs/Point position3d_camera
 geometry_msgs/Point position3d_map
