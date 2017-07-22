@@ -2,7 +2,6 @@
 import struct
 import rospy
 import rospkg
-from std_msgs.msg import *
 from geometry_msgs.msg import *
 from roboenvcv.msg import *
 
@@ -15,7 +14,7 @@ import threading
 
 header_size = 20
 
-def solve(field, img):
+def solve(header, field, img):
     size = img.shape[0:2]
     img = img.astype(np.float32) / 255.0
     img = cv2.resize(img, (227, 227))
@@ -25,6 +24,7 @@ def solve(field, img):
     y = models(x)
 
     msg = Person()
+    msg.header = header
     msg.sensor_id = struct.unpack('i', bytearray(field[12:16]))[0]
     msg.position3d = Point(struct.unpack('f', bytearray(field[0:4]))[0],
                            struct.unpack('f', bytearray(field[4:8]))[0],
@@ -39,7 +39,7 @@ def solve(field, img):
     pubmutex.release()
 
 
-def backthread(data):
+def backthread(header, data):
     global onrun
 
     # parse msg
@@ -66,7 +66,7 @@ def backthread(data):
     # conduct face analysis
     threads = [None for x in range(len(imgs))]
     for idx, img in enumerate(imgs):
-        threads[idx] = threading.Thread(target=solve, args=(rest[idx], img))
+        threads[idx] = threading.Thread(target=solve, args=(header, rest[idx], img))
     for t in threads:
         t.start()
     for t in threads:
@@ -86,7 +86,7 @@ def on_subscribe(msg):
     try:
         if not onrun:
             onrun = True
-            thread = threading.Thread(target=backthread, args=(msg.data,))
+            thread = threading.Thread(target=backthread, args=(msg.header, msg.data,))
             thread.start()
     finally:
         runmutex.release()
@@ -118,6 +118,6 @@ if __name__ == '__main__':
     onrun = False
     runmutex = threading.Lock()
 
-    sub = rospy.Subscriber('/roboenvcv/cropped/images', UInt8MultiArray, on_subscribe)
+    sub = rospy.Subscriber('/roboenvcv/cropped/images', UInt8ArrayStamped, on_subscribe)
 
     rospy.spin()

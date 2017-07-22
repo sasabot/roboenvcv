@@ -1,7 +1,7 @@
 #include <ros/ros.h>
 #include <ros/callback_queue.h>
 #include <ros/subscribe_options.h>
-#include <std_msgs/UInt8MultiArray.h>
+#include <roboenvcv/UInt8ArrayStamped.h>
 #include <sensor_msgs/Image.h>
 #include <roboenvcv/RegionOfInterestInfos.h>
 
@@ -26,7 +26,7 @@ void ImageCallback(const sensor_msgs::Image::ConstPtr &_msg) {
 
 void BoundingsCallback
 (const roboenvcv::RegionOfInterestInfos::ConstPtr &_msg) {
-  std_msgs::UInt8MultiArray msg;
+  roboenvcv::UInt8ArrayStamped msg;
   // first 1 byte is number of faces
   msg.data.push_back(static_cast<uint8_t>(_msg->infos.size()));
 
@@ -134,7 +134,7 @@ int main(int argc, char **argv) {
   nh.getParam("sensor_id", sensor_id_);
 
   crop_publisher_ =
-    nh.advertise<std_msgs::UInt8MultiArray>
+    nh.advertise<roboenvcv::UInt8ArrayStamped>
     ("/roboenvcv/cropped/images", 100);
 
 #ifdef __DEBUG__
