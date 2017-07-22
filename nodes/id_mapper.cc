@@ -44,6 +44,15 @@ std::vector<FaceLog> face_log_;
 
 void PersonCoordinateCallback
 (const roboenvcv::PersonCoordinate::ConstPtr& _msg) {
+  // person all removed signal from upstream
+  if (_msg->id == "---remove-all") {
+    for (auto log = face_log_.begin(); log != face_log_.end(); ++log)
+      log->Free(next_reserved_face_id_++);
+    roboenvcv::PersonCoordinate msg;
+    msg.id = "---remove-all";
+    return;
+  }
+
   // check if any old log exists
   for (auto log = face_log_.begin(); log != face_log_.end(); ++log)
     if (std::chrono::duration_cast<std::chrono::milliseconds>
