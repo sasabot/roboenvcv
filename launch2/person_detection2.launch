@@ -1,0 +1,94 @@
+<launch>
+  <arg name="sensor_id" default="0"/>
+  <arg name="tf_dynamic" default="true"/>
+  <arg name="num_faces" default="5"/>
+
+  <!-- sensor topic settings -->
+  <arg name="low_rgb" default="/kinect/rgb"/>
+  <arg name="low_rgbd" default="/kinect/stream"/>
+  <arg name="high_rgb" default="/kinect/rgb/hd"/>
+  <arg name="tf_msg" default="/tf_msg/dynamic_kinect_frame"/>
+
+  <!-- internal i/o topic settings -->
+  <arg name="roi_out" default="/roboenvcv/cropped/boundings"/>
+
+  <!-- low/high resolution scale -->
+  <arg name="x_scale" default="3"/>
+  <arg name="y_scale" default="3"/>
+
+  <!-- camera frame settings -->
+  <arg name="y_up" default="true"/>
+  <arg name="depth_queue_size" default="30"/>
+  <arg name="image_queue_size" default="100"/>
+  <arg name="tf_queue_size" default="30"/>
+  <arg name="timestamp" default="0.12"/>
+
+  <!-- haardetector node settings -->
+  <arg name="haarcascade" default="haarcascade_mcs_upperbody.xml"/>
+
+  <!-- person exclude regions -->
+  <arg name="min_map_x" default="-20.0"/>
+  <arg name="min_map_y" default="-20.0"/>
+  <arg name="max_map_x" default="20.0"/>
+  <arg name="max_map_y" default="20.0"/>
+
+  <!-- person detection is done on gpu -->
+
+  <!-- extract faceinfo from detection results -->
+
+  <node name="openpose_faceinfo_extractor" pkg="roboenvcv"
+        type="openpose_faceinfo_extractor" output="screen"
+        respawn="true">
+      <param name="haarcascade" value="$(arg haarcascade)"/>
+      <param name="image/x_scale" value="$(arg x_scale)"/>
+      <param name="image/y_scale" value="$(arg y_scale)"/>
+      <param name="queue_size" value="$(arg depth_queue_size)"/>
+      <param name="timestamp" value="$(arg timestamp)"/>
+      <remap from="/camera/low_resolution_rgbd_points" to="$(arg low_rgbd)"/>
+      <remap from="/roboenvcv/cropped/boundings" to="$(arg roi_out)"/>
+  </node>
+
+  <!-- common from here -->
+
+  <node name="facepose_detector" pkg="roboenvcv"
+        type="facepose_detector.py" output="screen">
+      <param name="gpu" value="false"/>
+  </node>
+
+  <node name="crop_image" pkg="roboenvcv"
+        type="crop_image_timestamped" output="screen">
+      <param name="sensor_id" value="$(arg sensor_id)"/>
+      <param name="queue_size" value="$(arg image_queue_size)"/>
+      <param name="timestamp" value="$(arg timestamp)"/>
+      <remap from="/camera/high_resolution_image" to="$(arg high_rgb)"/>
+      <remap from="/roboenvcv/cropped/boundings" to="$(arg roi_out)"/>
+  </node>
+
+  <node name="to_global" pkg="roboenvcv"
+        type="to_global" output="screen"
+        unless="$(arg tf_dynamic)">
+      <param name="sensor_id" value="$(arg sensor_id)"/>
+      <param name="y_up" value="$(arg y_up)"/>
+      <remap from="/tf_msg/sensor" to="$(arg tf_msg)"/>
+  </node>
+
+  <group if="$(arg tf_dynamic)">
+    <node name="to_global" pkg="roboenvcv"
+          type="to_global_dynamic" output="screen">
+        <param name="sensor_id" value="$(arg sensor_id)"/>
+        <param name="y_up" value="$(arg y_up)"/>
+        <param name="queue_size" value="$(arg tf_queue_size)"/>
+        <param name="timestamp" value="$(arg timestamp)"/>
+        <param name="min_map_x" value="$(arg min_map_x)"/>
+        <param name="min_map_y" value="$(arg min_map_y)"/>
+        <param name="max_map_x" value="$(arg max_map_x)"/>
+        <param name="max_map_y" value="$(arg max_map_y)"/>
+        <remap from="/tf_msg/sensor" to="$(arg tf_msg)"/>
+    </node>
+  </group>
+
+  <node name="id_mapper" pkg="roboenvcv"
+        type="id_mapper" output="screen">
+      <param name="tracknfaces" value="$(arg num_faces)"/>
+  </node>
+</launch>
