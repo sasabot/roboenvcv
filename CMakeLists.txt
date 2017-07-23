@@ -21,6 +21,7 @@ add_message_files(
   RegionOfInterestInfo.msg
   RegionOfInterestInfos.msg
   UInt8ArrayStamped.msg
+  Int32Stamped.msg
 )
 
 generate_messages(
@@ -191,4 +192,8 @@ target_link_libraries(dynamic_sensor_tfstamped ${catkin_LIBRARIES})
 add_executable(to_global_dynamic nodes2/to_global_dynamic.cc)
 target_link_libraries(to_global_dynamic ${catkin_LIBRARIES})
 add_dependencies(to_global_dynamic roboenvcv_generate_messages_cpp)
+
+add_executable(id_mapper2 nodes2/id_mapper2.cc)
+target_link_libraries(id_mapper2 ${catkin_LIBRARIES})
+add_dependencies(id_mapper2 roboenvcv_generate_messages_cpp)
 ################## :nodes2 ##################

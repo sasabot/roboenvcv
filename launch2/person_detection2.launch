@@ -1,7 +1,7 @@
 <launch>
   <arg name="sensor_id" default="0"/>
   <arg name="tf_dynamic" default="true"/>
-  <arg name="num_faces" default="5"/>
+  <arg name="num_faces" default="3"/>
 
   <!-- sensor topic settings -->
   <arg name="low_rgb" default="/kinect/rgb"/>
@@ -88,7 +88,7 @@
   </group>
 
   <node name="id_mapper" pkg="roboenvcv"
-        type="id_mapper" output="screen">
+        type="id_mapper2" output="screen">
       <param name="tracknfaces" value="$(arg num_faces)"/>
   </node>
 </launch>
