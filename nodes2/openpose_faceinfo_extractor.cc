@@ -4,7 +4,7 @@
 #include <ros/callback_queue.h>
 #include <ros/subscribe_options.h>
 #include <jsk_recognition_msgs/PeoplePoseArray.h>
-#include <roboenvcv/PersonCoordinate.h> // for downstream signal
+#include <roboenvcv/Int32Stamped.h> // for downstream signal
 #include <roboenvcv/RegionOfInterestInfo.h>
 #include <roboenvcv/RegionOfInterestInfos.h>
 #include <sensor_msgs/PointCloud2.h>
@@ -24,10 +24,12 @@
 #include <limits>
 #include <vector>
 #include <utility>
+#include <algorithm>
 
 std::vector<sensor_msgs::PointCloud2> v_depth_;
 std::mutex depth_mutex_;
 cv::CascadeClassifier haar_detector_;
+int max_faces_;
 int x_scale_;
 int y_scale_;
 ros::Publisher face_roi_info_publisher_;
@@ -74,7 +76,7 @@ void PeoplePoseCallback
       found = static_cast<int>(d - v_depth_.begin());
     }
   }
-  if (found > 0 && time_diff < time_thre_) {
+  if (found >= 0 && time_diff < time_thre_) {
     pcl_conversions::toPCL(v_depth_.at(found), pcl);
     ROS_INFO("found %f == %f", v_depth_.at(found).header.stamp.toSec(), secs);
     v_depth_.erase(v_depth_.begin(), v_depth_.begin() + found);
@@ -96,15 +98,15 @@ void PeoplePoseCallback
 
   if (_msg->poses.size() == 0) {
     // no one found, send person lost signal to downstream
-    roboenvcv::PersonCoordinate msg;
-    msg.id = "---remove-all";
+    roboenvcv::Int32Stamped msg;
+    msg.header = _msg->header;
+    msg.data = 0;
     full_downstream_publisher_.publish(msg);
     return;
   }
 
-  // get depth threshold using openpose results
-  float depth_threshold = 0.0;
-  std::vector<std::pair<int, int> > pose_pixels;
+  // get openpose results
+  std::vector<std::pair<float, std::pair<int, int>> > pose_pixels;
   for (auto obj = _msg->poses.begin(); obj != _msg->poses.end(); ++obj) {
     // find neck position
     auto limb = std::find(obj->limb_names.begin(), obj->limb_names.end(), "Neck");
@@ -127,17 +129,36 @@ void PeoplePoseCallback
       continue;
     }
 
-    if (p_ref->z > depth_threshold)
-      depth_threshold = p_ref->z;
-
-    pose_pixels.push_back({pixel_x, pixel_y});
+    pose_pixels.push_back({p_ref->z, {pixel_x, pixel_y}});
   }
-  depth_threshold += D_;
 
-  // detect faces using haar detector
+  // no valid person found, return
+  if (pose_pixels.size() == 0) {
+    ROS_WARN("no valid person found!!!!!");
+    return;
+  }
+
+  // get depth threshold using openpose results
+  std::sort(pose_pixels.begin(), pose_pixels.end(),
+            [](std::pair<float, std::pair<int, int>> _a,
+               std::pair<float, std::pair<int, int>> _b) {
+              return (_a.first < _b.first);
+            });
+  if (pose_pixels.size() > max_faces_)
+    // exculde faces by depth if more than track number
+    pose_pixels.erase(pose_pixels.begin() + max_faces_, pose_pixels.end());
+  float depth_threshold = pose_pixels.back().first + D_;
+
+  // inform current tracked number of people to id_mapper
+  // note, useful when number of people < max_faces_
+  roboenvcv::Int32Stamped nump_msg;
+  nump_msg.header = _msg->header;
+  nump_msg.data = std::min(static_cast<int>(_msg->poses.size()), max_faces_);
+  full_downstream_publisher_.publish(nump_msg);
+
   // compress image for speedup (~320x180)
-  int in_height = (cloud->height >> 1);
-  int in_width = (cloud->width >> 1);
+  int in_height = cloud->height;
+  int in_width = cloud->width;
   // get compressed gray image
   cv::Mat img(in_height, in_width, CV_8U);
   int i = 0;
@@ -150,11 +171,13 @@ void PeoplePoseCallback
       img.at<char>(i, j++) = 255;
     else
       img.at<char>(i, j++) = static_cast<uint8_t>((p->r + p->g + p->b) / 3);
-    k += 2; // stride by 2
+    // k += 2; // stride by 1
+    ++k;
     if (j >= img.cols) {
       j = 0;
       ++i;
-      k = ((i * cloud->width) << 1);
+      // k = ((i * cloud->width) << 1);
+      k = (i * cloud->width);
     }
   }
   std::vector<cv::Rect> heads;
@@ -165,6 +188,9 @@ void PeoplePoseCallback
              static_cast<int>(_msg->poses.size()), static_cast<int>(heads.size()));
     if (heads.size() == 0)
       return; // no result from haar
+  } else {
+    ROS_INFO("expecting %d heads, found %d heads from haar",
+             static_cast<int>(_msg->poses.size()), static_cast<int>(heads.size()));
   }
 
   roboenvcv::RegionOfInterestInfos msg;
@@ -175,15 +201,18 @@ void PeoplePoseCallback
   std::vector<std::pair<float, std::pair<int, int>> >
     result_pairs(heads.size(), {std::numeric_limits<float>::max(), {-1, -1}});
   for (auto obj = pose_pixels.begin(); obj != pose_pixels.end(); ++obj) {
-    auto p_ref = cloud->points.begin() + obj->first + obj->second * cloud->width;
+    auto p_ref = cloud->points.begin() + obj->second.first + obj->second.second * cloud->width;
 
     // find most closest head from haar
     float pixel_diff = std::numeric_limits<float>::max();
     std::vector<cv::Rect>::iterator head_roi;
     for (auto head = heads.begin(); head != heads.end(); ++head) {
-      float diff = fabs((head->y + head->height) - obj->second);
-      if (diff < pixel_diff) {
-        pixel_diff = diff;
+      // float diff_x = abs(((head->x + (head->width >> 1)) << 1) - obj->second.first);
+      // float diff_y = fabs(((head->y + head->height) << 1) - obj->second.second);
+      float diff_y = abs((head->y + head->height) - obj->second.second);
+      float diff_x = abs((head->x + (head->width >> 1)) - obj->second.first);
+      if ((diff_x + diff_y) < pixel_diff) {
+        pixel_diff = diff_x + diff_y;
         head_roi = head;
       }
     }
@@ -196,24 +225,29 @@ void PeoplePoseCallback
     }
   }
 
+#ifdef __DEBUG__
+  for (auto head = heads.begin(); head != heads.end(); ++head)
+    cv::rectangle(img, *head, cv::Scalar(0));
+#endif
+
   // get final results
   for (auto it = result_pairs.begin(); it != result_pairs.end(); ++it) {
     ROS_INFO("found pairs: %d, %d", it->second.first, it->second.second);
     if (it->second.first < 0 && it->second.second < 0)
-      return;
+      continue;
 
     auto p_ref = cloud->points.begin() + it->second.first;
     auto head_roi = heads.begin() + it->second.second;
 
-#ifdef __DEBUG__
-    cv::rectangle(img, *head_roi, cv::Scalar(0));
-#endif
-
     roboenvcv::RegionOfInterestInfo info;
-    info.roi.x_offset = ((head_roi->x + static_cast<int>(head_roi->width * 0.2)) << 1) * x_scale_;
-    info.roi.y_offset = (head_roi->y << 1) * y_scale_;
-    info.roi.width = static_cast<int>(head_roi->width * 1.2) * x_scale_;
-    info.roi.height = static_cast<int>(head_roi->height * 1.2) * y_scale_;
+    // info.roi.x_offset = ((head_roi->x + static_cast<int>(head_roi->width * 0.2)) << 1) * x_scale_;
+    // info.roi.y_offset = (head_roi->y << 1) * y_scale_;
+    // info.roi.width = static_cast<int>(head_roi->width * 1.2) * x_scale_;
+    // info.roi.height = static_cast<int>(head_roi->height * 1.2) * y_scale_;
+    info.roi.x_offset = ((head_roi->x + static_cast<int>(head_roi->width * 0.2))) * x_scale_;
+    info.roi.y_offset = (head_roi->y) * y_scale_;
+    info.roi.width = static_cast<int>(head_roi->width * 0.6) * x_scale_;
+    info.roi.height = static_cast<int>(head_roi->height * 0.6) * y_scale_;
     info.center3d.x = p_ref->x; // set x value same as neck
     info.center3d.y = p_ref->y + head_height_;
     info.center3d.z = p_ref->z;
@@ -252,6 +286,9 @@ int main(int argc, char **argv) {
     std::exit(0);
   }
 
+  max_faces_ = 3;
+  nh.getParam("/tracknfaces", max_faces_);
+
   queue_size_ = 10;
   nh.getParam("queue_size", queue_size_);
 
@@ -263,8 +300,8 @@ int main(int argc, char **argv) {
     ("/roboenvcv/cropped/boundings", 1);
 
   full_downstream_publisher_ =
-    nh.advertise<roboenvcv::PersonCoordinate>
-    ("/roboenvcv/personcoordinate/global/withid", 1);
+    nh.advertise<roboenvcv::Int32Stamped>
+    ("/roboenvcv/personcount", 1);
 
   ros::CallbackQueue image_queue;
   ros::SubscribeOptions image_ops =
