@@ -48,7 +48,7 @@ void BoundingsCallback
     }
   }
   std::vector<sensor_msgs::Image>::iterator img;
-  if (found > 0 && time_diff < time_thre_) {
+  if (found >= 0 && time_diff < time_thre_) {
     ROS_INFO("found %f == %f", v_image_.at(found).header.stamp.toSec(), secs);
     img = v_image_.erase(v_image_.begin(), v_image_.begin() + found);
   } else {

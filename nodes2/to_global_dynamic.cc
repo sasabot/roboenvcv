@@ -39,7 +39,7 @@ void calcGlobalHeadInfo(const roboenvcv::Person::ConstPtr& _msg) {
     }
   }
   std::vector<geometry_msgs::PoseStamped>::iterator ps;
-  if (found > 0 && time_diff < time_thre_) {
+  if (found >= 0 && time_diff < time_thre_) {
     ROS_INFO("found %f == %f", v_ps_.at(found).header.stamp.toSec(), secs);
     ps = v_ps_.erase(v_ps_.begin(), v_ps_.begin() + found);
   } else {
@@ -54,6 +54,7 @@ void calcGlobalHeadInfo(const roboenvcv::Person::ConstPtr& _msg) {
      ps->pose.orientation.z, ps->pose.orientation.w);
 
   roboenvcv::PersonCoordinate msg;
+  msg.header = _msg->header;
 
   Eigen::Vector3f position3d_map =
     rot_global * Eigen::Vector3f(_msg->position3d.x,
