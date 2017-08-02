@@ -75,7 +75,7 @@ int main(int argc, char **argv) {
   pub_ = nh.advertise<roboenvcv::BoolStamped>("/" + ns + "/global/sensordirection/filter", 1);
 
   ros::Subscriber base_subscriber =
-    nh.subscribe("/tf_msg/robot", 10, BasePositionCallback);
+    nh.subscribe("/tf_msg/base", 10, BasePositionCallback);
 
   ros::Subscriber sensor_subscriber =
     nh.subscribe("/tf_msg/sensor", 10, SensorPositionCallback);

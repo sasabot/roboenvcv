@@ -37,7 +37,7 @@
       <remap from="/tf_msg/static_sensor" to="$(arg tf_msg)"/>
   </node>
 
-  <node name="dynamic_base_tf" pkg="roboenvcv" type="dynamic_sensor_tf">
+  <node name="dynamic_base_tf" pkg="roboenvcv" type="dynamic_sensor_tfstamped">
         <param name="dynamic_frame" value="$(arg base_link)"/>
         <remap from="/tf_msg/dynamic_sensor" to="$(arg tf_base)"/>
   </node>
@@ -49,7 +49,7 @@
     </node>
   </group>
 
-  <node name="sensordirection_filter" pkg="roboenvcv" type="sensordirection_filter">
+  <node name="sensordirection_filter" pkg="roboenvcv" type="sensordirection_filter" output="screen">
         <param name="x" value="$(arg xf)"/>
         <param name="y" value="$(arg yf)"/>
         <param name="theta" value="$(arg thetaf)"/>
