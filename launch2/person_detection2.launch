@@ -2,6 +2,7 @@
   <arg name="sensor_id" default="0"/>
   <arg name="tf_dynamic" default="true"/>
   <arg name="num_faces" default="3"/>
+  <arg name="enable_filter" default="false"/>
 
   <!-- sensor topic settings -->
   <arg name="low_rgb" default="/kinect/rgb"/>
@@ -39,6 +40,7 @@
   <node name="openpose_faceinfo_extractor" pkg="roboenvcv"
         type="openpose_faceinfo_extractor" output="screen"
         respawn="true">
+      <param name="enable_filter" value="$(arg enable_filter)"/>
       <param name="haarcascade" value="$(arg haarcascade)"/>
       <param name="image/x_scale" value="$(arg x_scale)"/>
       <param name="image/y_scale" value="$(arg y_scale)"/>
