@@ -7,6 +7,7 @@
 #include <roboenvcv/Int32Stamped.h> // for downstream signal
 #include <roboenvcv/RegionOfInterestInfo.h>
 #include <roboenvcv/RegionOfInterestInfos.h>
+#include <roboenvcv/BoolStamped.h>
 #include <sensor_msgs/PointCloud2.h>
 
 #include <pcl_conversions/pcl_conversions.h>
@@ -27,7 +28,9 @@
 #include <algorithm>
 
 std::vector<sensor_msgs::PointCloud2> v_depth_;
+std::vector<roboenvcv::BoolStamped> v_sensor_;
 std::mutex depth_mutex_;
+std::mutex sensor_mutex_;
 cv::CascadeClassifier haar_detector_;
 int max_faces_;
 int x_scale_;
@@ -37,12 +40,13 @@ ros::Publisher downstream_publisher_; // to /local
 ros::Publisher full_downstream_publisher_; // to /global/withid
 int queue_size_;
 double time_thre_;
+bool sensor_filter_;
 
 // parameters
 float head_height_ = 0.24;
 float D_ = 0.25;
 
-#define __DEBUG__
+//#define __DEBUG__
 
 #ifdef __DEBUG__
 std::mutex dbg_mutex_;
@@ -55,6 +59,14 @@ void DepthCallback(const sensor_msgs::PointCloud2::ConstPtr &_msg) {
     v_depth_.erase(v_depth_.begin());
   v_depth_.push_back(*_msg);
   depth_mutex_.unlock();
+}
+
+void SensorFilterCallback(const roboenvcv::BoolStamped::ConstPtr &_msg) {
+  sensor_mutex_.lock();
+  if (v_sensor_.size() >= queue_size_) // only keep queue_size_ depth images
+    v_sensor_.erase(v_sensor_.begin());
+  v_sensor_.push_back(*_msg);
+  sensor_mutex_.unlock();
 }
 
 void PeoplePoseCallback
@@ -88,6 +100,33 @@ void PeoplePoseCallback
     return;
   }
   depth_mutex_.unlock();
+
+  // find sensor position w/closest time frame
+  if (sensor_filter_) {
+    int found = -1;
+    double time_diff = std::numeric_limits<double>::max();
+    sensor_mutex_.lock();
+    for (auto s = v_sensor_.begin(); s != v_sensor_.end(); ++s) {
+      double diff = fabs(secs - s->header.stamp.toSec());
+      if (diff < time_diff) {
+        time_diff = diff;
+        found = static_cast<int>(s - v_sensor_.begin());
+      }
+    }
+    if (found >= 0 && time_diff < time_thre_) {
+      ROS_INFO("found %f == %f", v_sensor_.at(found).header.stamp.toSec(), secs);
+      v_sensor_.erase(v_sensor_.begin(), v_sensor_.begin() + found);
+    } else {
+      sensor_mutex_.unlock();
+      ROS_WARN("sensor filter w/ close time frame not found! %f ~ %f, looking for %f",
+               v_sensor_.front().header.stamp.toSec(),
+               v_sensor_.back().header.stamp.toSec(), secs);
+      return;
+    }
+    sensor_mutex_.unlock();
+    if (!v_sensor_.begin()->data) // sensor data out of region, should be rejected
+      return;
+  }
 
   pcl::fromPCLPointCloud2(pcl, *cloud);
 
@@ -286,6 +325,9 @@ int main(int argc, char **argv) {
     std::exit(0);
   }
 
+  sensor_filter_ = true;
+  nh.getParam("enable_filter", sensor_filter_);
+
   max_faces_ = 3;
   nh.getParam("/tracknfaces", max_faces_);
 
@@ -326,6 +368,18 @@ int main(int argc, char **argv) {
   ros::Subscriber bb_sub = nh.subscribe(bb_ops);
   ros::AsyncSpinner bb_spinner(1, &bb_queue);
   bb_spinner.start();
+
+  ros::CallbackQueue sensorfilter_queue;
+  ros::SubscribeOptions sensorfilter_ops =
+    ros::SubscribeOptions::create<roboenvcv::BoolStamped>(
+        "/kinect/global/sensordirection/filter",
+        1,
+        boost::bind(&SensorFilterCallback, _1),
+        ros::VoidPtr(),
+        &sensorfilter_queue);
+  ros::Subscriber sensorfilter_queue_sub = nh.subscribe(sensorfilter_ops);
+  ros::AsyncSpinner sensorfilter_spinner(1, &sensorfilter_queue);
+  sensorfilter_spinner.start();
 
 #ifdef __DEBUG__
   cv::namedWindow("debug_window", cv::WINDOW_AUTOSIZE);
