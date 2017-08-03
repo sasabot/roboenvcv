@@ -63,7 +63,7 @@ void DepthCallback(const sensor_msgs::PointCloud2::ConstPtr &_msg) {
 
 void SensorFilterCallback(const roboenvcv::BoolStamped::ConstPtr &_msg) {
   sensor_mutex_.lock();
-  if (v_sensor_.size() >= queue_size_) // only keep queue_size_ depth images
+  if (v_sensor_.size() >= queue_size_)
     v_sensor_.erase(v_sensor_.begin());
   v_sensor_.push_back(*_msg);
   sensor_mutex_.unlock();
@@ -113,18 +113,19 @@ void PeoplePoseCallback
         found = static_cast<int>(s - v_sensor_.begin());
       }
     }
+    bool use_data = false;
     if (found >= 0 && time_diff < time_thre_) {
       ROS_INFO("found %f == %f", v_sensor_.at(found).header.stamp.toSec(), secs);
       v_sensor_.erase(v_sensor_.begin(), v_sensor_.begin() + found);
+      use_data = v_sensor_.begin()->data;
     } else {
       sensor_mutex_.unlock();
       ROS_WARN("sensor filter w/ close time frame not found! %f ~ %f, looking for %f",
                v_sensor_.front().header.stamp.toSec(),
                v_sensor_.back().header.stamp.toSec(), secs);
-      return;
     }
     sensor_mutex_.unlock();
-    if (!v_sensor_.begin()->data) // sensor data out of region, should be rejected
+    if (!use_data) // sensor data out of region, should be rejected
       return;
   }
 
