@@ -42,6 +42,7 @@
         respawn="true">
       <param name="enable_filter" value="$(arg enable_filter)"/>
       <param name="haarcascade" value="$(arg haarcascade)"/>
+      <param name="y_up" value="$(arg y_up)"/>
       <param name="image/x_scale" value="$(arg x_scale)"/>
       <param name="image/y_scale" value="$(arg y_scale)"/>
       <param name="queue_size" value="$(arg depth_queue_size)"/>
