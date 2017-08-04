@@ -63,7 +63,7 @@ void calcGlobalHeadInfo(const roboenvcv::Person::ConstPtr& _msg) {
 
   // don't send if person is out of bounds
   if (position3d_map.x() < min_map_x_ || position3d_map.x() > max_map_x_
-      || position3d_map.y() < min_map_y_ || position3d_map.y() > max_map_y_)    
+      || position3d_map.y() < min_map_y_ || position3d_map.y() > max_map_y_)
     return;
 
   Eigen::Matrix3f mat;
@@ -79,7 +79,7 @@ void calcGlobalHeadInfo(const roboenvcv::Person::ConstPtr& _msg) {
     Eigen::AngleAxisf yaw_angle(_msg->roll, Eigen::Vector3f::UnitZ());
     Eigen::AngleAxisf pitch_angle(_msg->yaw, Eigen::Vector3f::UnitY());
     q = yaw_angle * pitch_angle * roll_angle;
-    mat << 0, 1, 0, 0, 0, 1, 1, 0, 0;
+    mat << 0, 1, 0, 0, 0, -1, -1, 0, 0;
   }
   auto pose3d = q * Eigen::Quaternionf(mat);
 

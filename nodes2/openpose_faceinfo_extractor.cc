@@ -41,6 +41,7 @@ ros::Publisher full_downstream_publisher_; // to /global/withid
 int queue_size_;
 double time_thre_;
 bool sensor_filter_;
+bool y_up_;
 
 // parameters
 float head_height_ = 0.24;
@@ -289,7 +290,10 @@ void PeoplePoseCallback
     info.roi.width = static_cast<int>(head_roi->width * 0.6) * x_scale_;
     info.roi.height = static_cast<int>(head_roi->height * 0.6) * y_scale_;
     info.center3d.x = p_ref->x; // set x value same as neck
-    info.center3d.y = p_ref->y + head_height_;
+    if (y_up_)
+      info.center3d.y = p_ref->y + head_height_;
+    else
+      info.center3d.y = p_ref->y - head_height_;
     info.center3d.z = p_ref->z;
 
     msg.infos.push_back(info);
@@ -312,6 +316,9 @@ void PeoplePoseCallback
 int main(int argc, char **argv) {
   ros::init(argc, argv, "extract_face_roi_info_from_openpose");
   ros::NodeHandle nh("~");
+
+  y_up_ = false;
+  nh.getParam("y_up", y_up_);
 
   x_scale_ = 2;
   y_scale_ = 2;
