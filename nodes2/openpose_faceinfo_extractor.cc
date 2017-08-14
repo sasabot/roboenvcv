@@ -48,8 +48,13 @@ float head_height_ = 0.24;
 float D_ = 0.25;
 
 //#define __DEBUG__
+//#define __CV_DEBUG__
 
 #ifdef __DEBUG__
+ros::Publisher debug_publisher_;
+#endif
+
+#ifdef __CV_DEBUG__
 std::mutex dbg_mutex_;
 cv::Mat dbg_img_;
 #endif
@@ -266,7 +271,7 @@ void PeoplePoseCallback
     }
   }
 
-#ifdef __DEBUG__
+#if defined(__CV_DEBUG__) || defined(__DEBUG__)
   for (auto head = heads.begin(); head != heads.end(); ++head)
     cv::rectangle(img, *head, cv::Scalar(0));
 #endif
@@ -307,6 +312,22 @@ void PeoplePoseCallback
   }
 
 #ifdef __DEBUG__
+  sensor_msgs::Image dbgimg;
+  dbgimg.header = _msg->header;
+  dbgimg.width = img.cols;
+  dbgimg.height = img.rows;
+  dbgimg.step = dbgimg.width;
+  dbgimg.encoding = "mono8";
+  dbgimg.is_bigendian = true;
+  dbgimg.data.resize(img.cols * img.rows);
+  int dst = 0;
+  for (size_t y = 0; y < img.rows; ++y)
+    for (size_t x = 0; x < img.cols; ++x)
+      dbgimg.data[dst++] = img.at<uchar>(y, x);
+  debug_publisher_.publish(dbgimg);
+#endif
+
+#ifdef __CV_DEBUG__
   dbg_mutex_.lock();
   cv::resize(img, dbg_img_, cv::Size(img.cols >> 1, img.rows >> 1));
   dbg_mutex_.unlock();
@@ -390,6 +411,10 @@ int main(int argc, char **argv) {
   sensorfilter_spinner.start();
 
 #ifdef __DEBUG__
+  debug_publisher_ = nh.advertise<sensor_msgs::Image>("/roboenvcv/haardebug", 1);
+#endif
+
+#ifdef __CV_DEBUG__
   cv::namedWindow("debug_window", cv::WINDOW_AUTOSIZE);
 
   dbg_mutex_.lock();
