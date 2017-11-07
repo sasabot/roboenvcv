@@ -176,6 +176,7 @@ add_dependencies(id_mapper roboenvcv_generate_messages_cpp)
 find_package(jsk_recognition_msgs)
 
 if (jsk_recognition_msgs_FOUND AND PCL_FOUND AND OpenCV_FOUND)
+  include_directories(${jsk_recognition_msgs_INCLUDE_DIRS})
   add_executable(openpose_faceinfo_extractor
     nodes2/openpose_faceinfo_extractor.cc)
   target_link_libraries(openpose_faceinfo_extractor
