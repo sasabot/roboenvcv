@@ -25,7 +25,7 @@
   <arg name="timestamp" default="0.12"/>
 
   <!-- haardetector node settings -->
-  <arg name="haarcascade" default="haarcascade_mcs_upperbody.xml"/>
+  <arg name="haarcascade" default="/usr/share/opencv/haarcascades/haarcascade_mcs_upperbody.xml"/>
 
   <!-- person exclude regions -->
   <arg name="min_map_x" default="-20.0"/>
@@ -53,10 +53,10 @@
 
   <!-- common from here -->
 
-  <node name="facepose_detector" pkg="roboenvcv"
+  <!--node name="facepose_detector" pkg="roboenvcv"
         type="facepose_detector.py" output="screen">
       <param name="gpu" value="false"/>
-  </node>
+  </node-->
 
   <node name="crop_image" pkg="roboenvcv"
         type="crop_image_timestamped" output="screen">

@@ -20,8 +20,9 @@ def solve(header, field, img):
     img = cv2.resize(img, (227, 227))
     img = cv2.normalize(img, None, -0.5, 0.5, cv2.NORM_MINMAX)
     imgs = xp.asarray([np.transpose(img, (2, 0, 1))])
-    x = chainer.Variable(imgs, volatile=True)
-    y = models(x)
+    x = chainer.Variable(imgs)
+    with chainer.no_backprop_mode():
+        y = models(x)
 
     msg = Person()
     msg.header = header

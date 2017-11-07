@@ -17,4 +17,9 @@
       stride: 8
     </rosparam>
   </node>
+
+  <node name="facepose_detector" pkg="roboenvcv"
+        type="facepose_detector.py" output="screen">
+      <param name="gpu" value="true"/>
+  </node>
 </launch>
