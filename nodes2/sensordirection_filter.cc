@@ -46,13 +46,13 @@ void SensorPositionGlobal(const geometry_msgs::PoseStamped::ConstPtr &_msg) {
   }
   float x = _msg->pose.position.x - v_base_position_.begin()->pose.position.x;
   float y = _msg->pose.position.y - v_base_position_.begin()->pose.position.y;
-  float theta = acos(ref_x_ * x + ref_y_ * y) * 2;
+  float theta = fabs(acos((ref_x_ * x + ref_y_ * y) / sqrt((ref_x_*ref_x_ + ref_y_*ref_y_) * (x*x + y*y))));
   roboenvcv::BoolStamped msg;
   msg.header = _msg->header;
-  if (theta > theta_ || theta < -theta_)
-    msg.data = false;
-  else
+  if (theta < theta_)
     msg.data = true;
+  else
+    msg.data = false;
   pub_.publish(msg);
 }
 

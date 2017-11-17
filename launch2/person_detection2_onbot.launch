@@ -5,13 +5,6 @@
   <arg name="base_link" default="waist_link"/>
   <arg name="tf_msg" default="/tf_msg/dynamic_kinect_frame"/>
   <arg name="tf_base" default="/tf_msg/base_frame"/>
-  <arg name="queue_size" default="30"/>
-  <arg name="timestamp" default="0.12"/>
-
-  <!-- sensor filter settings -->
-  <arg name="xf" default="1.0"/>
-  <arg name="yf" default="0.0"/>
-  <arg name="thetaf" default="0.707"/>
 
   <!-- static camera settings -->
   <arg name="x" default="0.0"/>
@@ -39,31 +32,14 @@
   </node>
 
   <node name="dynamic_base_tf" pkg="roboenvcv" type="dynamic_sensor_tfstamped">
-        <param name="dynamic_frame" value="$(arg base_link)"/>
-        <remap from="/tf_msg/dynamic_sensor" to="$(arg tf_base)"/>
+      <param name="dynamic_frame" value="$(arg base_link)"/>
+      <remap from="/tf_msg/dynamic_sensor" to="$(arg tf_base)"/>
   </node>
 
   <group if="$(arg tf_dynamic)">
     <node name="dynamic_sensor_tf" pkg="roboenvcv" type="dynamic_sensor_tfstamped">
-          <param name="dynamic_frame" value="$(arg camera_link)"/>
-          <remap from="/tf_msg/dynamic_sensor" to="$(arg tf_msg)"/>
+        <param name="dynamic_frame" value="$(arg camera_link)"/>
+        <remap from="/tf_msg/dynamic_sensor" to="$(arg tf_msg)"/>
     </node>
   </group>
-
-  <node name="sensordirection_axis_static" pkg="roboenvcv" type="sensordirection_axis_static"
-        output="screen" respawn="true">
-        <param name="ns" value="$(arg ns)"/>
-        <param name="x" value="$(arg xf)"/>
-        <param name="y" value="$(arg yf)"/>
-  </node>
-
-  <node name="sensordirection_filter" pkg="roboenvcv" type="sensordirection_filter" output="screen"
-        respawn="true">
-        <param name="ns" value="$(arg ns)"/>
-        <param name="theta" value="$(arg thetaf)"/>
-        <param name="queue_size" value="$(arg queue_size)"/>
-        <param name="timestamp" value="$(arg timestamp)"/>
-        <remap from="/tf_msg/sensor" to="$(arg tf_msg)"/>
-        <remap from="/tf_msg/base" to="$(arg tf_base)"/>
-  </node>
 </launch>
