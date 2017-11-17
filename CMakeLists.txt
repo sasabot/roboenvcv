@@ -202,4 +202,8 @@ add_dependencies(id_mapper2 roboenvcv_generate_messages_cpp)
 add_executable(sensordirection_filter nodes2/sensordirection_filter.cc)
 target_link_libraries(sensordirection_filter ${catkin_LIBRARIES})
 add_dependencies(sensordirection_filter roboenvcv_generate_messages_cpp)
+
+add_executable(sensordirection_axis_static nodes2/sensordirection_axis_static.cc)
+target_link_libraries(sensordirection_axis_static ${catkin_LIBRARIES})
+add_dependencies(sensordirection_axis_static roboenvcv_generate_messages_cpp)
 ################## :nodes2 ##################

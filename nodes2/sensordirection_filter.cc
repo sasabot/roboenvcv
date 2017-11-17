@@ -11,13 +11,19 @@ float theta_;
 
 std::vector<geometry_msgs::PoseStamped> v_base_position_;
 
-void BasePositionCallback(const geometry_msgs::PoseStamped::ConstPtr &_msg) {
+void BasePositionGlobal(const geometry_msgs::PoseStamped::ConstPtr &_msg) {
   if (v_base_position_.size() >= queue_size_)
     v_base_position_.erase(v_base_position_.begin());
   v_base_position_.push_back(*_msg);
 }
 
-void SensorPositionCallback(const geometry_msgs::PoseStamped::ConstPtr &_msg) {
+void ReferenceAxisGlobal(const geometry_msgs::PoseStamped::ConstPtr &_msg) {
+  // for now, does not handle severe time stamp
+  ref_x_ = _msg->pose.position.x;
+  ref_y_ = _msg->pose.position.y;
+}
+
+void SensorPositionGlobal(const geometry_msgs::PoseStamped::ConstPtr &_msg) {
   // find most near matched time
   double secs = _msg->header.stamp.toSec();
   int found = -1;
@@ -57,17 +63,14 @@ int main(int argc, char **argv) {
   std::string ns("kinect");
   nh.getParam("ns", ns);
 
+  ref_x_ = 0.0;
+  ref_y_ = 1.0;
+
   queue_size_ = 10;
   nh.getParam("queue_size", queue_size_);
 
   time_thre_ = 0.1;
   nh.getParam("timestamp", time_thre_);
-
-  ref_x_ = 0.0;
-  nh.getParam("x", ref_x_);
-
-  ref_y_ = 1.0;
-  nh.getParam("y", ref_y_);
 
   theta_ = 1.57;
   nh.getParam("theta", theta_);
@@ -75,10 +78,13 @@ int main(int argc, char **argv) {
   pub_ = nh.advertise<roboenvcv::BoolStamped>("/" + ns + "/global/sensordirection/filter", 1);
 
   ros::Subscriber base_subscriber =
-    nh.subscribe("/tf_msg/base", 10, BasePositionCallback);
+    nh.subscribe("/tf_msg/base", 10, BasePositionGlobal);
 
   ros::Subscriber sensor_subscriber =
-    nh.subscribe("/tf_msg/sensor", 10, SensorPositionCallback);
+    nh.subscribe("/tf_msg/sensor", 10, SensorPositionGlobal);
+
+  ros::Subscriber axis_subscriber =
+    nh.subscribe("/" + ns + "/global/sensordirection/inputaxis", 1, ReferenceAxisGlobal);
 
   ros::Rate r(30);
   while (ros::ok()) {
