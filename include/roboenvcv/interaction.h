@@ -9,9 +9,11 @@ namespace roboenvcv
   /// @param _person Info of human head position/posture in camera coordinate.
   /// @param _point_base Target point location in base coordinate.
   /// @param _dist_thre Angle between sight ray and object in radian to define as looking.
+  /// @param _project_points Evaluate on xy plane (no z) if true.
   /// @return Looking or not looking.
   bool SharedAttention
-    (PersonCameraCoords _person, Eigen::Vector3f _point_base, float _dist_thre)
+    (PersonCameraCoords _person, Eigen::Vector3f _point_base, float _dist_thre,
+     bool _project_points=false)
   {
     Eigen::Vector3f
       sight_direction_camera = _person.pose3d * Eigen::Vector3f(1.0, 0, 0);
@@ -20,6 +22,12 @@ namespace roboenvcv
     Eigen::Vector3f
       point_to_person_base = _point_base -
       (_person.mat_base_to_camera * _person.position3d + _person.p_base_to_camera);
+
+    if (_project_points) {
+      sight_direction_base.z() = 0.0;
+      point_to_person_base.z() = 0.0;
+    }
+
     float distance =
       acos(sight_direction_base.dot(point_to_person_base)
            / (sight_direction_camera.norm() * point_to_person_base.norm()));
