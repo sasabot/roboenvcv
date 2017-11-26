@@ -39,9 +39,10 @@ void SensorPositionGlobal(const geometry_msgs::PoseStamped::ConstPtr &_msg) {
     ROS_INFO("found %f == %f", v_base_position_.at(found).header.stamp.toSec(), secs);
     v_base_position_.erase(v_base_position_.begin(), v_base_position_.begin() + found);
   } else {
-    ROS_WARN("base position w/ close time frame not found! %f ~ %f, looking for %f",
-             v_base_position_.front().header.stamp.toSec(),
-             v_base_position_.back().header.stamp.toSec(), secs);
+    if (v_base_position_.size() > 0)
+      ROS_WARN("base position w/ close time frame not found! %f ~ %f, looking for %f",
+               v_base_position_.front().header.stamp.toSec(),
+               v_base_position_.back().header.stamp.toSec(), secs);
     return;
   }
   float x = _msg->pose.position.x - v_base_position_.begin()->pose.position.x;
