@@ -77,8 +77,9 @@ namespace roboenvcv
     float t = plane_normal.dot(person_position3d_base - plane_center)
       / plane_normal.dot(sight_direction_base);
 
+    // t cannot be negative as sight must be looking 'forward'
     Eigen::Vector3f
-      intersection = person_position3d_base + t * sight_direction_base;
+      intersection = person_position3d_base + fabs(t) * sight_direction_base;
     float distance = (intersection - plane_center).norm();
 
     if (distance < _inner_threshold)
