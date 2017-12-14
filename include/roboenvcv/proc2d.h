@@ -14,7 +14,7 @@
 namespace roboenvcv
 {
    //////////////////////////////////////////////////
-    int cutComponentsWithStats
+    inline int cutComponentsWithStats
       (cv::Mat image, cv::Mat &labels, cv::Mat &stats, cv::Mat &centroids,
        std::string debug_folder="")
     {
@@ -101,8 +101,8 @@ namespace roboenvcv
     };
 
     //////////////////////////////////////////////////
-    bool findPackagePattern(cv::Mat &_input, cv::Mat &_stats,
-                            std::string _debug_folder="") {
+    inline bool findPackagePattern(cv::Mat &_input, cv::Mat &_stats,
+                                   std::string _debug_folder="") {
       cv::Mat img;
       cv::resize(_input, img, cv::Size(400, 400));
 

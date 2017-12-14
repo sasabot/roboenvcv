@@ -14,7 +14,7 @@ namespace roboenvcv
 {
   /// @brief Creates log directory for roboenvcv functions.
   /// @return Name of created directory.
-  std::string createLogDir()
+  inline std::string createLogDir()
   {
     auto date =
       std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
@@ -38,7 +38,7 @@ namespace roboenvcv
   /// @param[in] _objects List of objects to filter.
   /// @param[in] _indices The indices of objects to retrieve.
   /// @return List of objects from applied indices.
-  std::vector<objectarea> filter
+  inline std::vector<objectarea> filter
     (std::vector<objectarea> &_objects, std::vector<int> &_indices)
   {
     std::vector<objectarea> result;
@@ -53,7 +53,7 @@ namespace roboenvcv
   /// @param[in] _env Target environment (should be plane).
   ///    Make sure _env and _obj has values in the same coordinate.
   /// @return Distance of object to environment plane.
-  float getDistance
+  inline float getDistance
     (objectarea _obj, objectarea _env)
   {
     Eigen::Vector3f w = _obj.center3d - _env.center3d;
@@ -63,7 +63,7 @@ namespace roboenvcv
   /// @brief Print object name properties (e.g. OCR result).
   /// @param[in] _objects List of objects to print name properties.
   /// @param[in] _dbgfolder Folder to save results.
-  void printNameProperties(std::vector<objectarea> &_objects, std::string _dbgfolder="")
+  inline void printNameProperties(std::vector<objectarea> &_objects, std::string _dbgfolder="")
   {
     printf("printing properties\n-------\n");
     for (auto obj = _objects.begin(); obj != _objects.end(); ++obj) {

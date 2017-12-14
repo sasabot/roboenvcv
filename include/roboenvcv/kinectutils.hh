@@ -23,8 +23,8 @@ namespace kinect
   {
 
     //////////////////////////////////////////////////
-    void GetCloud(sensor_msgs::PointCloud2 &points,
-                  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud)
+    inline void GetCloud(sensor_msgs::PointCloud2 &points,
+                         pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud)
     {
       // ros msg -> pcl PointCloud
       pcl::PCLPointCloud2 pcl;
@@ -51,7 +51,7 @@ namespace kinect
     };
 
     //////////////////////////////////////////////////
-    void GetImage(sensor_msgs::Image &image, cv::Mat &img)
+    inline void GetImage(sensor_msgs::Image &image, cv::Mat &img)
     {
       // get image as cv::Mat
       int k = 3;
@@ -64,7 +64,7 @@ namespace kinect
     };
 
     //////////////////////////////////////////////////
-    void Convert(roboenvcv::objectarea &obj)
+    inline void Convert(roboenvcv::objectarea &obj)
     {
       // indices will not be flipped
       // 2d data will also not be flipped

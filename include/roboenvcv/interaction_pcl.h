@@ -15,7 +15,7 @@ namespace roboenvcv
   /// @param _p_base_to_camera Camera position where point cloud was captured.
   /// @param _threshold Point to sight ray distance in meters to include as looking.
   /// @param[in] _transform_points If true, returns points in base coordinate. Else, camera coordinate. 
-  void SharedAttention
+  inline void SharedAttention
     (PersonCameraCoords _person,
      pcl::PointCloud<pcl::PointXYZRGB>::Ptr _points_camera,
      Eigen::Quaternionf _mat_base_to_camera, Eigen::Vector3f _p_base_to_camera,

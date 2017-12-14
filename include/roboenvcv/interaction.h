@@ -11,7 +11,7 @@ namespace roboenvcv
   /// @param _dist_thre Angle between sight ray and object in radian to define as looking.
   /// @param _project_points Evaluate on xy plane (no z) if true.
   /// @return Looking or not looking.
-  bool SharedAttention
+  inline bool SharedAttention
     (PersonCameraCoords _person, Eigen::Vector3f _point_base, float _dist_thre,
      bool _project_points=false)
   {
@@ -45,7 +45,7 @@ namespace roboenvcv
   /// @param _mat_global_to_base When applied, _plane_normal will be parsed as global coordinate.
   /// @param _p_global_to_base When applied, _plane_normal will be parsed as global coordinate.
   /// @return Score of looking or not.
-  float SharedAttention
+  inline float SharedAttention
     (PersonCameraCoords _person,
      Eigen::Vector3f _plane_normal, Eigen::Vector3f _plane_center,
      float _inner_threshold, float _outer_threshold,

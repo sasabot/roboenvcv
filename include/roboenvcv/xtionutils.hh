@@ -23,8 +23,8 @@ namespace xtion
   {
 
     //////////////////////////////////////////////////
-    void GetCloud(sensor_msgs::PointCloud2 &points,
-                  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud)
+    inline void GetCloud(sensor_msgs::PointCloud2 &points,
+                         pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud)
     {
       // ros msg -> pcl PointCloud
       pcl::PCLPointCloud2 pcl;
@@ -33,7 +33,7 @@ namespace xtion
     };
 
     //////////////////////////////////////////////////
-    void GetImage(sensor_msgs::Image &image, cv::Mat &img)
+    inline void GetImage(sensor_msgs::Image &image, cv::Mat &img)
     {
       // get image as cv::Mat
       int k = 0;
@@ -44,7 +44,7 @@ namespace xtion
     };
 
     //////////////////////////////////////////////////
-    void Convert(roboenvcv::objectarea &obj)
+    inline void Convert(roboenvcv::objectarea &obj)
     {
       printf("xtion does not require convert!");
     };

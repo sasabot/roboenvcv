@@ -96,8 +96,8 @@ namespace roboenvcv
     };
 
     //////////////////////////////////////////////////
-    void medianCut(std::vector<cv::Vec3b> &_img, int _bucket_idx, int _layer,
-                   std::vector<cv::Vec3b> &_palettes)
+    inline void medianCut(std::vector<cv::Vec3b> &_img, int _bucket_idx, int _layer,
+                          std::vector<cv::Vec3b> &_palettes)
     {
       if (_layer >= log2(_palettes.size())) {
         std::array<int, 3> average_rgb = {0, 0, 0};
@@ -156,8 +156,8 @@ namespace roboenvcv
     };
 
     //////////////////////////////////////////////////
-    void medianCut(cv::Mat &_img, int _bucket_idx, int _layer,
-                   std::vector<cv::Vec3b> &_palettes)
+    inline void medianCut(cv::Mat &_img, int _bucket_idx, int _layer,
+                          std::vector<cv::Vec3b> &_palettes)
     {
       cv::Vec3b max(0, 0, 0);
       cv::Vec3b min(255, 255, 255);
@@ -218,9 +218,9 @@ namespace roboenvcv
     };
 
     //////////////////////////////////////////////////
-    void drawPalette(std::vector<cv::Vec3b> &_palette,
-                     cv::Vec3b _ref = cv::Vec3b(255, 255, 255),
-                     std::string _save_to="")
+    inline void drawPalette(std::vector<cv::Vec3b> &_palette,
+                            cv::Vec3b _ref = cv::Vec3b(255, 255, 255),
+                            std::string _save_to="")
     {
       cv::Mat color_cells = cv::Mat_<cv::Vec3b>(80, 720, cv::Vec3b(255, 255, 255));
       int cell_width = 720 / (_palette.size() + 1);
@@ -251,9 +251,9 @@ namespace roboenvcv
     };
 
     //////////////////////////////////////////////////
-    void getColorNames(std::vector<cv::Vec3b> &_colors,
-                       std::vector<std::pair<std::string, float> > &_res,
-                       const std::map<std::string, cv::Vec3b> &_map)
+    inline void getColorNames(std::vector<cv::Vec3b> &_colors,
+                              std::vector<std::pair<std::string, float> > &_res,
+                              const std::map<std::string, cv::Vec3b> &_map)
     {
       std::vector<std::pair<std::string, float> > names(_colors.size());
 
