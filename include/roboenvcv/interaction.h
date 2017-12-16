@@ -42,13 +42,14 @@ namespace roboenvcv
   /// @param _plane_center Position of plane in base coordinate or global coordinate
   /// @param _inner_threshold Distance range in meters to define as absolutely looking at plane.
   /// @param _outer_threshold Distance range in meters to define as likely looking at plane.
+  /// @param _project_points Evaluate on xy plane (no z) if true.
   /// @param _mat_global_to_base When applied, _plane_normal will be parsed as global coordinate.
   /// @param _p_global_to_base When applied, _plane_normal will be parsed as global coordinate.
   /// @return Score of looking or not.
   inline float SharedAttention
     (PersonCameraCoords _person,
      Eigen::Vector3f _plane_normal, Eigen::Vector3f _plane_center,
-     float _inner_threshold, float _outer_threshold,
+     float _inner_threshold, float _outer_threshold, bool _project_points=false,
      Eigen::Quaternionf _mat_global_to_base=Eigen::Quaternionf(0, 0, 0, 0),
      Eigen::Vector3f _p_global_to_base=Eigen::Vector3f(0, 0, 0))
   {
@@ -73,6 +74,12 @@ namespace roboenvcv
     Eigen::Vector3f
       person_position3d_base =
       _person.mat_base_to_camera * _person.position3d + _person.p_base_to_camera;
+
+    if (_project_points) {
+      person_position3d_base.z() = 0.0;
+      plane_center.z() = 0.0;
+      sight_direction_base.z() = 0.0;
+    }
 
     float t = plane_normal.dot(person_position3d_base - plane_center)
       / plane_normal.dot(sight_direction_base);
