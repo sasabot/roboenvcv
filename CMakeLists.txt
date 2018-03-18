@@ -207,3 +207,10 @@ add_executable(sensordirection_axis_static nodes2/sensordirection_axis_static.cc
 target_link_libraries(sensordirection_axis_static ${catkin_LIBRARIES})
 add_dependencies(sensordirection_axis_static roboenvcv_generate_messages_cpp)
 ################## :nodes2 ##################
+
+################## else: ##################
+if (PCL_1.8_FOUND)
+  add_executable(euclidean_clustering else/euclidean_clustering.cc)
+  target_link_libraries(euclidean_clustering ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+endif()
+################## :else ##################
